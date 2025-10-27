@@ -14,15 +14,16 @@
 	},
 	"content_scripts": [
 		{
-			"js": ["content.js"],
-			"matches": ["https://*.instructure.com/*", "https://bcourses.berkeley.edu/*"]
+			"matches": ["https://*.instructure.com/*", "https://your.canvas.domain/*"],
+			"js": ["src/newCommand/nagivateAssignments.js"],
+			"run_at": "document_idle"
 		}
 	],
 	"background": {
 		"service_worker": "background.js",
 		"type": "module"
 	},
-	"permissions": ["storage", "activeTab", "scripting"],
+	"permissions": ["storage", "tabs", "activeTab"],
 	"web_accessible_resources": [
 		{
 			"resources": ["src/**/*.js"],
