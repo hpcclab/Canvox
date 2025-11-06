@@ -1,36 +1,70 @@
 {
-	"name": "Canvox",
-	"description": "Canvox is an accessibility tool for blind and the visually impaired students to help navigate the instruction software Canvas.",
-	"version": "1.0",
-	"manifest_version": 3,
-	"icons": {
-		"16": "images/icons/icon16.png",
-		"48": "images/icons/icon48.png",
-		"128": "images/icons/icon128.png"
-	},
-	"action": {
-		"default_popup": "src/view/popup.html",
-		"default_title": "Canvox\n An accessibility tool for blind and the visually impaired students"
-	},
-	"content_scripts": [
-		{
-			"js": ["content.js"],
-			"matches": ["https://*.instructure.com/*", "https://bcourses.berkeley.edu/*"]
-		}
-	],
-	"background": {
-		"service_worker": "background.js",
-		"type": "module"
-	},
-	"permissions": ["storage", "activeTab", "scripting"],
-	"web_accessible_resources": [
-		{
-			"resources": ["src/**/*.js"],
-			"matches": ["<all_urls>"]
-		},
-		{
-			"resources": ["audios/*.mp3"],
-			"matches": ["<all_urls>"]
-		}
-	]
+  "name": "Canvox",
+  "description": "Canvox is an accessibility tool for blind and the visually impaired students to help navigate the instruction software Canvas.",
+  "version": "1.0",
+  "manifest_version": 3,
+  "icons": {
+    "16": "images/icons/icon16.png",
+    "48": "images/icons/icon48.png",
+    "128": "images/icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "src/view/popup.html",
+    "default_title": "Canvox\n An accessibility tool for blind and the visually impaired students"
+  },
+  "content_scripts": [
+    {
+      "js": ["content.js"],
+      "matches": [
+        "https://*.instructure.com/*",
+        "https://bcourses.berkeley.edu/*"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "js": ["src/content/canvasPptSummarizer.js"],
+      "matches": [
+        "https://*.instructure.com/*",
+        "https://bcourses.berkeley.edu/*",
+        "https://*.instructureusercontent.com/*",
+        "https://*.inscloudgate.net/*",
+        "https://*.amazonaws.com/*",
+        "https://*.cloudfront.net/*",
+        "https://*.canvas-user-content.com/*",
+        "https://*.officeapps.live.com/*",
+        "https://*.officeapps-df.live.com/*",
+        "https://*.office.net/*"
+      ],
+      "run_at": "document_start",
+      "all_frames": true,
+      "match_about_blank": true
+    }
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "permissions": ["storage", "activeTab", "scripting", "alarms"],
+  "host_permissions": [
+    "https://*.instructure.com/*",
+    "https://bcourses.berkeley.edu/*",
+    "https://*.instructureusercontent.com/*",
+    "https://*.inscloudgate.net/*",
+    "https://*.amazonaws.com/*",
+    "https://*.cloudfront.net/*",
+    "https://*.canvas-user-content.com/*",
+    "https://*.officeapps.live.com/*",
+    "https://*.officeapps-df.live.com/*",
+    "https://*.office.net/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "lib/pdfjs/pdf.mjs",
+        "lib/pdfjs/pdf.worker.mjs",
+        "lib/jszip/jszip.min.js"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }
