@@ -418,3 +418,58 @@ document.addEventListener("DOMContentLoaded", () => {
 		});
 	}
 });
+
+function isCanvasUrl(url) {
+  return /https?:\/\/([^.]+\.)?instructure\.com/.test(url) || /https?:\/\/your\.canvas\.domain/.test(url);
+}
+
+function sendToActiveTab(message, onResponse) {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const tab = tabs && tabs[0];
+    if (!tab) {
+      console.warn("No active tab");
+      return;
+    }
+
+    if (!isCanvasUrl(tab.url || "")) {
+      // Save intent to storage so pages/bkg can react later
+      console.warn("Active tab is not a Canvas page. Persisting state to storage instead.");
+      if (message && message.action === "toggleMicrophone") {
+        chrome.storage.sync.set({ microphoneActive: !!message.active }, () => {
+          if (chrome.runtime.lastError) console.error("storage.set error:", chrome.runtime.lastError.message);
+          if (onResponse) onResponse({ saved: true });
+        });
+      }
+      return;
+    }
+
+    chrome.tabs.sendMessage(tab.id, message, (resp) => {
+      if (chrome.runtime.lastError) {
+        console.warn("sendMessage failed:", chrome.runtime.lastError.message);
+        // fallback: persist change to storage so main.js can pick it up next navigation
+        if (message && message.action === "toggleMicrophone") {
+          chrome.storage.sync.set({ microphoneActive: !!message.active }, () => {
+            if (chrome.runtime.lastError) console.error("storage.set error:", chrome.runtime.lastError.message);
+            if (onResponse) onResponse({ savedFallback: true });
+          });
+        }
+        return;
+      }
+      if (onResponse) onResponse(resp);
+    });
+  });
+}
+
+// Example: toggle button handler
+document.getElementById("toggleBtn")?.addEventListener("click", async () => {
+  // determine new state (example: read current from storage)
+  chrome.storage.sync.get("microphoneActive", (res) => {
+    const newState = !res.microphoneActive;
+    // try to message the page; if no page listener, we'll save to storage in the wrapper
+    sendToActiveTab({ action: "toggleMicrophone", active: newState }, (resp) => {
+      // update popup UI
+      const status = document.getElementById("status");
+      if (status) status.textContent = resp && (resp.saved || resp.savedFallback) ? "Saved state" : newState ? "Microphone on" : "Microphone off";
+    });
+  });
+});

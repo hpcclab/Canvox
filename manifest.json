@@ -12,13 +12,19 @@
 		"default_popup": "src/view/popup.html",
 		"default_title": "Canvox\n An accessibility tool for blind and the visually impaired students"
 	},
-	"content_scripts": [
-		{
-			"matches": ["https://*.instructure.com/*", "https://your.canvas.domain/*"],
-			"js": ["src/newCommand/nagivateAssignments.js"],
-			"run_at": "document_idle"
-		}
-	],
+"content_scripts": [
+  {
+    "matches": [
+      "https://*.instructure.com/*",
+      "https://your.canvas.domain/*"
+    ],
+    "js": [
+      "content.js",
+      "src/newCommand/submitAssignments.js"
+    ],
+    "run_at": "document_idle"
+  }
+],
 	"background": {
 		"service_worker": "background.js",
 		"type": "module"

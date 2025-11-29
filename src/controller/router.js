@@ -7,11 +7,100 @@ import { narratePage } from "../model/tts.js";
 import { wasAnInboxAction } from "./inbox.js";
 import { loginPageAction, onLoginPage } from "./login.js";
 
+function trySubmitCurrentAssignment() {
+	function normalize(text) {
+		return (text || "").replace(/\s+/g, " ").trim().toLowerCase();
+	}
+
+	function isVisible(el) {
+		const style = window.getComputedStyle(el);
+		const rect = el.getBoundingClientRect();
+		return (
+			style.display !== "none" &&
+			style.visibility !== "hidden" &&
+			rect.width > 0 &&
+			rect.height > 0
+		);
+	}
+
+	try {
+		// 1) Attribute-based selectors for the main assignment submit button
+		const attrSelectors = [
+			'[data-testid="assignment-submit-button"]',
+			'[data-testid="assignment-student-header-submit-button"]',
+			"#submit_assignment",
+			".submit_assignment_link",
+			'button[type="submit"]',
+			'input[type="submit"]',
+		];
+
+		for (const sel of attrSelectors) {
+			const btn = document.querySelector(sel);
+			if (btn && isVisible(btn)) {
+				console.log("Canvox: clicking assignment submit button via selector:", sel);
+				btn.click();
+				return true;
+			}
+		}
+
+		// 2) Fallback: match ONLY “submit assignment”-style text, not any “submit”
+		const candidates = Array.from(
+			document.querySelectorAll(
+				'button, a, [role="button"], input[type="submit"], div[role="button"]'
+			)
+		);
+
+		const targetPhrases = [
+			"submit assignment",
+			"resubmit assignment",
+			"start assignment",  // for “Start Assignment” style
+			"submit quiz",
+		];
+
+		for (const el of candidates) {
+			if (!isVisible(el)) continue;
+
+			const label =
+				normalize(el.textContent) ||
+				normalize(el.getAttribute("aria-label")) ||
+				normalize(el.value);
+
+			if (!label) continue;
+
+			for (const phrase of targetPhrases) {
+				if (label.includes(phrase)) {
+					console.log("Canvox: clicking assignment submit button via text match:", label);
+					el.click();
+					return true;
+				}
+			}
+		}
+
+		console.warn(
+			"Canvox: submit assignment requested but submit button was not found on this page."
+		);
+		return false;
+	} catch (err) {
+		console.error("Canvox: error while trying to submit assignment:", err);
+		return false;
+	}
+}
+
+
+
 async function routeActions(transcript, recognitionState) {
 	if (onLoginPage()) {
 		await loginPageAction(transcript, recognitionState);
 		return;
 	}
+
+	    //for submit assignment command
+    if (/submit\s+(the\s+)?assignment\b/i.test(transcript)) {
+		const ok = trySubmitCurrentAssignment();
+		// We return either way to STOP this from going into navigation logic.
+		return;
+	}
+
 
 	//check for text actions first
 	if (wasATextAction(transcript, recognitionState)) return;
