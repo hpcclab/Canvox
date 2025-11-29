@@ -46,8 +46,7 @@ function getAssignmentContext(doc, base) {
 
 	// Course name (Canvas breadcrumbs)
 	const breadcrumbCourse =
-		doc.querySelector('[aria-label="Breadcrumbs"] a') ||
-		doc.querySelector(".ic-app-course-menu__header-title");
+		doc.querySelector('[aria-label="Breadcrumbs"] a') || doc.querySelector(".ic-app-course-menu__header-title");
 	ctx.courseName = normalize(breadcrumbCourse?.textContent);
 
 	// Due date: Canvas has a few possible patterns
@@ -66,9 +65,7 @@ function getAssignmentContext(doc, base) {
 		doc.querySelector("#assignment_show .student-content") ||
 		doc.querySelector("article");
 
-	const descriptionText = normalize(
-		descElement?.innerText || descElement?.textContent || ""
-	);
+	const descriptionText = normalize(descElement?.innerText || descElement?.textContent || "");
 
 	if (descriptionText) {
 		ctx.sections.push({
@@ -130,8 +127,7 @@ function getCourseHomeContext(doc, base) {
 	const ctx = { ...base, type: "course_home" };
 
 	const title =
-		doc.querySelector("#section-tabs-header-subtitle") ||
-		doc.querySelector(".ic-app-course-menu__header-title");
+		doc.querySelector("#section-tabs-header-subtitle") || doc.querySelector(".ic-app-course-menu__header-title");
 	ctx.courseName = normalize(title?.textContent);
 
 	const frontPage =
@@ -161,10 +157,7 @@ function getGenericContext(doc, base) {
 	ctx.title = normalize(h1?.textContent);
 
 	const main =
-		doc.querySelector("main") ||
-		doc.querySelector('[role="main"]') ||
-		doc.querySelector("article") ||
-		doc.body;
+		doc.querySelector("main") || doc.querySelector('[role="main"]') || doc.querySelector("article") || doc.body;
 
 	const text = normalize(main?.innerText || main?.textContent || "");
 	if (text) {

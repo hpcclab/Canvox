@@ -6,11 +6,7 @@ import { wasATextAction } from "../model/text.js";
 import { narratePage } from "../model/tts.js";
 import { wasAnInboxAction } from "./inbox.js";
 import { loginPageAction, onLoginPage } from "./login.js";
-import { readQuickSummary, readFull, readDueDate, readNextSection, readPreviousSection,} from "../part c/reader.js";
-
-
-
-
+import { readQuickSummary, readFull, readDueDate, readNextSection, readPreviousSection } from "../part c/reader.js";
 
 function trySubmitCurrentAssignment() {
 	function normalize(text) {
@@ -20,12 +16,7 @@ function trySubmitCurrentAssignment() {
 	function isVisible(el) {
 		const style = window.getComputedStyle(el);
 		const rect = el.getBoundingClientRect();
-		return (
-			style.display !== "none" &&
-			style.visibility !== "hidden" &&
-			rect.width > 0 &&
-			rect.height > 0
-		);
+		return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
 	}
 
 	try {
@@ -50,25 +41,15 @@ function trySubmitCurrentAssignment() {
 
 		//2) Fallback: match ONLY “submit assignment”-style text, not any “submit”
 		const candidates = Array.from(
-			document.querySelectorAll(
-				'button, a, [role="button"], input[type="submit"], div[role="button"]'
-			)
+			document.querySelectorAll('button, a, [role="button"], input[type="submit"], div[role="button"]'),
 		);
 
-		const targetPhrases = [
-			"submit assignment",
-			"resubmit assignment",
-			"start assignment",  
-			"submit quiz",
-		];
+		const targetPhrases = ["submit assignment", "resubmit assignment", "start assignment", "submit quiz"];
 
 		for (const el of candidates) {
 			if (!isVisible(el)) continue;
 
-			const label =
-				normalize(el.textContent) ||
-				normalize(el.getAttribute("aria-label")) ||
-				normalize(el.value);
+			const label = normalize(el.textContent) || normalize(el.getAttribute("aria-label")) || normalize(el.value);
 
 			if (!label) continue;
 
@@ -81,9 +62,7 @@ function trySubmitCurrentAssignment() {
 			}
 		}
 
-		console.warn(
-			"Canvox: submit assignment requested but submit button was not found on this page."
-		);
+		console.warn("Canvox: submit assignment requested but submit button was not found on this page.");
 		return false;
 	} catch (err) {
 		console.error("Canvox: error while trying to submit assignment:", err);
@@ -91,40 +70,38 @@ function trySubmitCurrentAssignment() {
 	}
 }
 
-
-
 async function routeActions(transcript, recognitionState) {
 	if (onLoginPage()) {
 		await loginPageAction(transcript, recognitionState);
 		return;
 	}
 
-	    //for submit assignment command
-    if (/submit\s+(the\s+)?assignment\b/i.test(transcript)) {
+	//for submit assignment command
+	if (/submit\s+(the\s+)?assignment\b/i.test(transcript)) {
 		const ok = trySubmitCurrentAssignment();
 		//We return either way to STOP this from going into navigation logic.
 		return;
 	}
 
-		// Example: "give me a quick summary", "summarize this page"
+	// Example: "give me a quick summary", "summarize this page"
 	if (/summary|summarize\b/i.test(transcript)) {
 		readQuickSummary(recognitionState);
 		return;
 	}
 
-// Example: "read the whole assignment", "read this page"
+	// Example: "read the whole assignment", "read this page"
 	if (/read (the )?(whole|full|entire) (assignment|page)|read this\b/i.test(transcript)) {
 		readFull(recognitionState);
 		return;
 	}
 
-// Example: "when is this due?"
+	// Example: "when is this due?"
 	if (/when is this due|what'?s the due date|due when/i.test(transcript)) {
 		readDueDate(recognitionState);
 		return;
 	}
 
-// Example: "next section/part", "previous section/part"
+	// Example: "next section/part", "previous section/part"
 	if (/next (section|part)/i.test(transcript)) {
 		readNextSection(recognitionState);
 		return;

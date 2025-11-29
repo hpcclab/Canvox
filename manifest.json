@@ -1,26 +1,22 @@
 {
-  "manifest_version": 3,
-  "name": "Convox – Person B Test Harness",
-  "version": "0.1.2",
-  "description": "Quick-test the NLU + actions without other parts.",
-  "permissions": ["activeTab", "storage"],
-  "host_permissions": [
-    "https://*.instructure.com/*",
-    "https://*/courses/*",
-    "https://*/accounts/*"
-  ],
-  "content_scripts": [
-    {
-      "matches": ["https://*/*", "http://*/*"],
-      "js": ["content_test.js"],
-      "run_at": "document_idle",
-      "all_frames": true
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": ["lib/actions.js", "lib/intent.js"],
-      "matches": ["<all_urls>"]
-    }
-  ]
+	"manifest_version": 3,
+	"name": "Convox – Person B Test Harness",
+	"version": "0.1.2",
+	"description": "Quick-test the NLU + actions without other parts.",
+	"permissions": ["activeTab", "storage"],
+	"host_permissions": ["https://*.instructure.com/*", "https://*/courses/*", "https://*/accounts/*"],
+	"content_scripts": [
+		{
+			"matches": ["https://*/*", "http://*/*"],
+			"js": ["content_test.js"],
+			"run_at": "document_idle",
+			"all_frames": true
+		}
+	],
+	"web_accessible_resources": [
+		{
+			"resources": ["lib/actions.js", "lib/intent.js"],
+			"matches": ["<all_urls>"]
+		}
+	]
 }
