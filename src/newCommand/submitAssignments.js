@@ -11,7 +11,7 @@ function findCourseIdByName(courseName) {
     const name = normalize(courseName);
     if (!name) return null;
 
-    // 1) anchors that include /courses/<id>
+    //1) anchors that include /courses/<id>
     const anchors = Array.from(document.querySelectorAll("a[href*='/courses/']"));
     for (const a of anchors) {
       const href = a.getAttribute("href") || "";
@@ -23,7 +23,7 @@ function findCourseIdByName(courseName) {
       if (m && text.includes(name)) return m[1];
     }
 
-    // 2) course cards with data-course-id
+    //2) course cards with data-course-id
     const courseEls = Array.from(
       document.querySelectorAll("[data-course-id], [data-courseid], [data-course-id-short]")
     );
@@ -82,7 +82,7 @@ function clickAssignmentSubmitButton() {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message) return;
 
-  // 1) Handle "submitAssignment" from router.js
+  //1) Handle "submitAssignment" from router.js
   if (message.action === "submitAssignment") {
     try {
       const ok = clickAssignmentSubmitButton();
@@ -94,7 +94,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return;
   }
 
-  // 2) Existing navigation to course assignments (if you still use it)
+  //2) Existing navigation to course assignments
   if (message.action === "navigateToCourseAssignments" && message.courseName) {
     try {
       const courseId = findCourseIdByName(message.courseName);

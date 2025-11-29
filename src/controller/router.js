@@ -24,7 +24,7 @@ function trySubmitCurrentAssignment() {
 	}
 
 	try {
-		// 1) Attribute-based selectors for the main assignment submit button
+		//1)Attribute-based selectors for the main assignment submit button
 		const attrSelectors = [
 			'[data-testid="assignment-submit-button"]',
 			'[data-testid="assignment-student-header-submit-button"]',
@@ -43,7 +43,7 @@ function trySubmitCurrentAssignment() {
 			}
 		}
 
-		// 2) Fallback: match ONLY “submit assignment”-style text, not any “submit”
+		//2) Fallback: match ONLY “submit assignment”-style text, not any “submit”
 		const candidates = Array.from(
 			document.querySelectorAll(
 				'button, a, [role="button"], input[type="submit"], div[role="button"]'
@@ -53,7 +53,7 @@ function trySubmitCurrentAssignment() {
 		const targetPhrases = [
 			"submit assignment",
 			"resubmit assignment",
-			"start assignment",  // for “Start Assignment” style
+			"start assignment",  
 			"submit quiz",
 		];
 
@@ -97,7 +97,7 @@ async function routeActions(transcript, recognitionState) {
 	    //for submit assignment command
     if (/submit\s+(the\s+)?assignment\b/i.test(transcript)) {
 		const ok = trySubmitCurrentAssignment();
-		// We return either way to STOP this from going into navigation logic.
+		//We return either way to STOP this from going into navigation logic.
 		return;
 	}
 
