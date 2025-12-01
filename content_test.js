@@ -162,6 +162,23 @@
 		let listening = false;
 		let autoSubmitTimer = null;
 
+		// --- hotkey: Cmd/Ctrl + P to toggle listening ---
+		document.addEventListener("keydown", (e) => {
+    	try {
+      	  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "p") {
+            e.preventDefault();
+            if (!listening) {
+                recognizer.start();
+            } else {
+                recognizer.stop();
+            }
+        }
+   			 } catch (err) {
+     	   console.warn("[Convox Test] hotkey error:", err);
+   		 }
+		});
+
+
 		micBtn.addEventListener("click", () => {
 			if (!listening) {
 				recognizer.start();
