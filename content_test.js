@@ -222,5 +222,4 @@
 	} else {
 		ensureTestUI();
 	}
-
 })();
