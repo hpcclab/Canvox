@@ -9,17 +9,25 @@
     "https://*/courses/*",
     "https://*/accounts/*"
   ],
-  "content_scripts": [
-    {
-      "matches": ["https://*/*", "http://*/*"],
-      "js": ["content_test.js"],
-      "run_at": "document_idle",
-      "all_frames": true
-    }
-  ],
+    "content_scripts": [
+      {
+        "matches": ["https://*/*", "http://*/*"],
+        "js": ["content_test.js"],
+        "run_at": "document_idle",
+        "all_frames": true,
+        "type": "module"  
+      }
+    ],
+
   "web_accessible_resources": [
     {
-      "resources": ["lib/actions.js", "lib/intent.js"],
+      "resources": [
+        "convox_actions.js",
+        "intent.js",
+        "memory.js",
+        "models.js",
+        "planner.js"
+      ],
       "matches": ["<all_urls>"]
     }
   ]

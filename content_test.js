@@ -1,8 +1,6 @@
-// content_test.js
-// Person B test harness with floating button + auto-recovery for "Extension context invalidated".
-
 (async () => {
-  // --- helpers ---------------------------------------------------------------
+  const { handleUtterance, speak } = await import(chrome.runtime.getURL("actions.js"));
+
   function logToast(msg, ...rest) {
     console.log("[Convox Test]", msg, ...rest);
   }
@@ -12,52 +10,18 @@
     parts.push(`URL: ${location.host}${location.pathname}`);
     parts.push(`speechSynthesis: ${"speechSynthesis" in window ? "available" : "missing"}`);
     const links = Array.from(document.querySelectorAll("a, [role='link']"));
-    const sample = links
-      .slice(0, 10)
-      .map(a => (a.textContent || "").trim())
-      .filter(Boolean)
-      .slice(0, 5);
+    const sample = links.slice(0, 10).map(a => (a.textContent || "").trim()).filter(Boolean).slice(0, 5);
     parts.push(`links on page: ${links.length} (sample: ${sample.join(" | ") || "—"})`);
-    try {
-      const { speak } = await safeImportActions();
-      speak("Convox self-test: Speech is working.");
-      parts.push("TTS check: attempted to speak a test line.");
-    } catch (e) {
-      parts.push("TTS check: failed to import speak()");
-    }
+    speak("Convox self-test: Speech is working.");
+    parts.push("TTS check: attempted to speak a test line.");
     alert("Convox Diagnose:\n\n" + parts.join("\n"));
   }
 
-  // --- robust importer with one-time auto-reload -----------------------------
-  let reloadedOnce = false;
-
-  async function safeImportActions() {
-    try {
-      const url = chrome.runtime.getURL("lib/actions.js");
-      return await import(url);
-    } catch (err) {
-      const msg = String(err?.message || err);
-      // If the extension was reloaded/updated, the old content script is stale.
-      if (msg.includes("Extension context invalidated")) {
-        logToast("Detected invalidated context. Attempting one-time page reload to re-inject content script.");
-        if (!reloadedOnce) {
-          reloadedOnce = true;
-          alert("Convox was just reloaded. I’ll refresh this page once so testing can continue.");
-          location.reload(); // re-injects the content script
-        }
-        throw err; // stop current action; user will retry after refresh
-      }
-      throw err;
-    }
-  }
-
   async function runUtterance(text) {
-    const { handleUtterance } = await safeImportActions();
     const out = await handleUtterance(text);
     logToast(out);
   }
 
-  // --- hotkey (Cmd/Ctrl/Option + K) -----------------------------------------
   document.addEventListener("keydown", async (e) => {
     try {
       if ((e.metaKey || e.ctrlKey || e.altKey) && e.key.toLowerCase() === "k") {
@@ -69,7 +33,6 @@
     }
   });
 
-  // --- floating button -------------------------------------------------------
   function ensureTestButton() {
     if (document.getElementById("convox-test-btn")) return;
     const btn = document.createElement("button");
@@ -124,12 +87,6 @@
     ensureTestButton();
   }
 
-  // on-load voice cue
-  try {
-    const { speak } = await safeImportActions();
-    speak("Convox test harness loaded. Press Command K or click the Convox Test button to try a command.");
-  } catch (e) {
-    // If we hit invalidated context here, the auto-reload will trigger on first interaction.
-  }
+  speak("Convox test harness loaded. Press Command K or click the Convox Test button to try a command.");
   logToast("Loaded. Press Cmd/Ctrl/Option + K or click the Convox Test 🔊 button to test Person B.");
 })();
