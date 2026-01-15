@@ -5,6 +5,57 @@
 		console.log("[Convox Test]", msg, ...rest);
 	}
 
+	// ---- conversation transcript ---------------------------------------------
+	const convo = []; // { role: "user"|"convox"|"system", text, ts }
+	function nowTS() {
+		try {
+			return new Date().toLocaleTimeString();
+		} catch {
+			return "";
+		}
+	}
+	function pushConvo(role, text) {
+		const line = String(text ?? "").trim();
+		if (!line) return;
+		convo.push({ role, text: line, ts: nowTS() });
+		renderLog();
+	}
+	function convoToText() {
+		return convo
+			.map((m) => {
+				const who = m.role === "user" ? "You" : m.role === "convox" ? "Convox" : "System";
+				return `[${m.ts}] ${who}: ${m.text}`;
+			})
+			.join("\n");
+	}
+
+	// --- TTS capture (monkey-patch) -------------------------------------------
+	let ttsPatched = false;
+	function patchTTSOnce() {
+		if (ttsPatched) return;
+		ttsPatched = true;
+
+		if (!("speechSynthesis" in window) || typeof window.speechSynthesis?.speak !== "function") {
+			pushConvo("system", "speechSynthesis not available; cannot capture Convox speech.");
+			return;
+		}
+
+		const synth = window.speechSynthesis;
+		const originalSpeak = synth.speak.bind(synth);
+
+		synth.speak = (utter) => {
+			try {
+				const spoken = utter?.text ?? "";
+				if (spoken) pushConvo("convox", spoken);
+			} catch (e) {
+				// ignore logging failures
+			}
+			return originalSpeak(utter);
+		};
+
+		pushConvo("system", "TTS capture enabled (Convox speech will appear in transcript).");
+	}
+
 	async function diagnose() {
 		const parts = [];
 		parts.push(`URL: ${location.host}${location.pathname}`);
@@ -49,13 +100,84 @@
 
 	async function runUtterance(text) {
 		const { handleUtterance } = await safeImportActions();
+
+		pushConvo("user", text);
+
 		const out = await handleUtterance(text);
 		logToast(out);
+
+		// We don't force-log "result" text (Convox speaks via TTS and we capture that),
+		// but we log intent for debugging + transparency.
+		try {
+			const intent = out?.intent || "UNKNOWN";
+			const conf = out?.result?.confidence;
+			const reason = out?.result?.reason;
+			const meta =
+				typeof conf === "number"
+					? `Intent: ${intent} (conf ${conf.toFixed(2)})${reason ? ` — ${reason}` : ""}`
+					: `Intent: ${intent}${reason ? ` — ${reason}` : ""}`;
+			pushConvo("system", meta);
+		} catch {
+			// ignore
+		}
 	}
 
 	// --- prompt + speech UI ---------------------------------------------------
+	let logEl = null;
+	let copyBtn = null;
+	let clearBtn = null;
+
+	function renderLog() {
+		if (!logEl) return;
+		const txt = convoToText();
+		logEl.value = txt;
+		// keep scrolled to bottom
+		try {
+			logEl.scrollTop = logEl.scrollHeight;
+		} catch {}
+		// update copy button label briefly (optional)
+	}
+
+	async function copyConversation() {
+		const txt = convoToText();
+		try {
+			await navigator.clipboard.writeText(txt);
+			pushConvo("system", "Conversation copied to clipboard.");
+		} catch {
+			// fallback
+			try {
+				const ta = document.createElement("textarea");
+				ta.value = txt;
+				document.body.appendChild(ta);
+				ta.select();
+				document.execCommand("copy");
+				document.body.removeChild(ta);
+				pushConvo("system", "Conversation copied to clipboard.");
+			} catch {
+				alert("Copy failed. You can manually select and copy from the log box.");
+			}
+		}
+	}
+
+	function clearConversation() {
+		convo.length = 0;
+		pushConvo("system", "Conversation cleared.");
+		renderLog();
+	}
+
+	function stopSpeaking() {
+		try {
+			window.speechSynthesis?.cancel?.();
+			pushConvo("system", "Stopped speaking.");
+		} catch {
+			// ignore
+		}
+	}
+
 	function ensureTestUI() {
 		if (document.getElementById("convox-test-container")) return;
+
+		patchTTSOnce();
 
 		const container = document.createElement("div");
 		container.id = "convox-test-container";
@@ -70,7 +192,7 @@
 			borderRadius: "12px",
 			boxShadow: "0 2px 10px rgba(0,0,0,0.25)",
 			padding: "8px",
-			width: "250px",
+			width: "320px",
 		});
 
 		const header = document.createElement("div");
@@ -83,16 +205,69 @@
 		content.style.marginTop = "8px";
 		container.appendChild(content);
 
+		// transcript (text form)
+		logEl = document.createElement("textarea");
+		logEl.id = "convox-test-log";
+		logEl.readOnly = true;
+		logEl.placeholder = "Conversation transcript will appear here…";
+		Object.assign(logEl.style, {
+			width: "100%",
+			height: "140px",
+			resize: "none",
+			padding: "8px",
+			borderRadius: "8px",
+			border: "1px solid rgba(255,255,255,0.12)",
+			background: "#0b0b0b",
+			color: "#fff",
+			marginBottom: "8px",
+			lineHeight: "1.25",
+			fontSize: "12px",
+		});
+		content.appendChild(logEl);
+
+		// row: copy / clear
+		const row1 = document.createElement("div");
+		Object.assign(row1.style, { display: "flex", gap: "6px", marginBottom: "8px" });
+		content.appendChild(row1);
+
+		copyBtn = document.createElement("button");
+		copyBtn.textContent = "📋 Copy";
+		Object.assign(copyBtn.style, {
+			flex: "1",
+			padding: "6px",
+			borderRadius: "6px",
+			border: "none",
+			cursor: "pointer",
+			background: "#444",
+			color: "#fff",
+		});
+		copyBtn.addEventListener("click", copyConversation);
+		row1.appendChild(copyBtn);
+
+		clearBtn = document.createElement("button");
+		clearBtn.textContent = "🧹 Clear";
+		Object.assign(clearBtn.style, {
+			flex: "1",
+			padding: "6px",
+			borderRadius: "6px",
+			border: "none",
+			cursor: "pointer",
+			background: "#444",
+			color: "#fff",
+		});
+		clearBtn.addEventListener("click", clearConversation);
+		row1.appendChild(clearBtn);
+
 		// text input
 		const input = document.createElement("input");
 		input.type = "text";
 		input.placeholder = "Type a command or use mic 🎤";
 		Object.assign(input.style, {
 			width: "100%",
-			padding: "6px",
-			borderRadius: "6px",
+			padding: "8px",
+			borderRadius: "8px",
 			border: "none",
-			marginBottom: "6px",
+			marginBottom: "8px",
 		});
 		content.appendChild(input);
 
@@ -101,23 +276,41 @@
 		micBtn.textContent = "🎤 Listen";
 		Object.assign(micBtn.style, {
 			width: "100%",
-			padding: "6px",
-			borderRadius: "6px",
+			padding: "8px",
+			borderRadius: "8px",
 			border: "none",
 			cursor: "pointer",
 			background: "#444",
 			color: "#fff",
-			marginBottom: "6px",
+			marginBottom: "8px",
 		});
 		content.appendChild(micBtn);
+
+		// STOP SPEAKING button (what you asked for)
+		const stopSpeakBtn = document.createElement("button");
+		stopSpeakBtn.textContent = "🛑 Stop speaking";
+		Object.assign(stopSpeakBtn.style, {
+			width: "100%",
+			padding: "8px",
+			borderRadius: "8px",
+			border: "none",
+			cursor: "pointer",
+			background: "#b00020",
+			color: "#fff",
+			marginBottom: "8px",
+		});
+		stopSpeakBtn.addEventListener("click", () => {
+			stopSpeaking();
+		});
+		content.appendChild(stopSpeakBtn);
 
 		// submit button
 		const submitBtn = document.createElement("button");
 		submitBtn.textContent = "✅ Submit";
 		Object.assign(submitBtn.style, {
 			width: "100%",
-			padding: "6px",
-			borderRadius: "6px",
+			padding: "8px",
+			borderRadius: "8px",
 			border: "none",
 			cursor: "pointer",
 			background: "#28a745",
@@ -128,7 +321,9 @@
 		function submitCommand() {
 			const text = input.value.trim();
 			if (!text) return;
+
 			if (text.toLowerCase().includes("diagnose")) {
+				pushConvo("user", text);
 				diagnose();
 			} else {
 				runUtterance(text);
@@ -147,13 +342,18 @@
 
 		document.body.appendChild(container);
 
+		// initial log line
+		pushConvo("system", "Convox Test UI ready. Your commands + Convox speech will be logged here.");
+
 		// --- speech recognition ---
 		const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 		if (!SpeechRecognition) {
 			logToast("SpeechRecognition not supported in this browser.");
 			micBtn.disabled = true;
+			pushConvo("system", "SpeechRecognition not supported in this browser.");
 			return;
 		}
+
 		const recognizer = new SpeechRecognition();
 		recognizer.continuous = false;
 		recognizer.interimResults = true;
@@ -162,16 +362,19 @@
 		let listening = false;
 		let autoSubmitTimer = null;
 
+		function stopListening() {
+			try {
+				recognizer.stop();
+			} catch {}
+		}
+
 		// --- hotkey: Cmd/Ctrl + P to toggle listening ---
 		document.addEventListener("keydown", (e) => {
 			try {
 				if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "p") {
 					e.preventDefault();
-					if (!listening) {
-						recognizer.start();
-					} else {
-						recognizer.stop();
-					}
+					if (!listening) recognizer.start();
+					else stopListening();
 				}
 			} catch (err) {
 				console.warn("[Convox Test] hotkey error:", err);
@@ -179,22 +382,23 @@
 		});
 
 		micBtn.addEventListener("click", () => {
-			if (!listening) {
-				recognizer.start();
-			} else {
-				recognizer.stop();
-			}
+			if (!listening) recognizer.start();
+			else stopListening();
 		});
 
 		recognizer.addEventListener("start", () => {
 			listening = true;
 			micBtn.textContent = "🛑 Stop";
 			input.value = "";
+			pushConvo("system", "Listening…");
 		});
 
 		recognizer.addEventListener("end", () => {
 			listening = false;
 			micBtn.textContent = "🎤 Listen";
+			if (autoSubmitTimer) clearTimeout(autoSubmitTimer);
+			autoSubmitTimer = null;
+			pushConvo("system", "Stopped listening.");
 		});
 
 		recognizer.addEventListener("result", (event) => {
@@ -211,7 +415,7 @@
 		});
 
 		recognizer.addEventListener("speechend", () => {
-			recognizer.stop();
+			stopListening();
 		});
 
 		// handle enter key
