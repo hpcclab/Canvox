@@ -1,12 +1,62 @@
 // content_test.js
+// Test interface for Convox extension - logs conversation transcript and captures TTS output.
+// Updates requested:
+//  - Persistent logs across page navigations/reloads (until Clear is pressed)
+//  - Shortcut keys for each button
+//  - Help button (speaks + logs shortcuts)
+//  - Minimize button to hide UI (and shortcut)
+//  - Keep logs (do NOT auto-clear on page change)
+
 (async () => {
 	// --- helpers ---------------------------------------------------------------
 	function logToast(msg, ...rest) {
 		console.log("[Convox Test]", msg, ...rest);
 	}
 
+	// ---- persistent transcript store -----------------------------------------
+	const STORE_KEY = "convox_test_transcript_v1";
+	const UI_KEY = "convox_test_ui_state_v1";
+
+	function safeJSONParse(s, fallback) {
+		try {
+			return JSON.parse(s);
+		} catch {
+			return fallback;
+		}
+	}
+
+	function loadState() {
+		const raw = localStorage.getItem(STORE_KEY);
+		const arr = safeJSONParse(raw, []);
+		return Array.isArray(arr) ? arr : [];
+	}
+
+	function saveState() {
+		try {
+			localStorage.setItem(STORE_KEY, JSON.stringify(convo));
+		} catch (e) {
+			// storage can fail (quota/private mode) - still keep in-memory
+			console.warn("[Convox Test] Failed to persist transcript:", e);
+		}
+	}
+
+	function loadUIState() {
+		const raw = localStorage.getItem(UI_KEY);
+		const st = safeJSONParse(raw, {});
+		return st && typeof st === "object" ? st : {};
+	}
+
+	function saveUIState(patch) {
+		const cur = loadUIState();
+		const next = { ...cur, ...patch };
+		try {
+			localStorage.setItem(UI_KEY, JSON.stringify(next));
+		} catch {}
+		return next;
+	}
+
 	// ---- conversation transcript ---------------------------------------------
-	const convo = []; // { role: "user"|"convox"|"system", text, ts }
+	let convo = loadState(); // { role: "user"|"convox"|"system", text, ts }
 	function nowTS() {
 		try {
 			return new Date().toLocaleTimeString();
@@ -18,6 +68,7 @@
 		const line = String(text ?? "").trim();
 		if (!line) return;
 		convo.push({ role, text: line, ts: nowTS() });
+		saveState();
 		renderLog();
 	}
 	function convoToText() {
@@ -47,7 +98,7 @@
 			try {
 				const spoken = utter?.text ?? "";
 				if (spoken) pushConvo("convox", spoken);
-			} catch (e) {
+			} catch {
 				// ignore logging failures
 			}
 			return originalSpeak(utter);
@@ -71,7 +122,7 @@
 			const { speak } = await safeImportActions();
 			speak("Convox self-test: Speech is working.");
 			parts.push("TTS check: attempted to speak a test line.");
-		} catch (e) {
+		} catch {
 			parts.push("TTS check: failed to import speak()");
 		}
 		alert("Convox Diagnose:\n\n" + parts.join("\n"));
@@ -99,15 +150,13 @@
 	}
 
 	async function runUtterance(text) {
-		const { handleUtterance } = await safeImportActions();
-
+		const { handleUtterance, initAutoResume } = await safeImportActions();
+		initAutoResume(); // ensure auto-resume is active
 		pushConvo("user", text);
 
 		const out = await handleUtterance(text);
 		logToast(out);
 
-		// We don't force-log "result" text (Convox speaks via TTS and we capture that),
-		// but we log intent for debugging + transparency.
 		try {
 			const intent = out?.intent || "UNKNOWN";
 			const conf = out?.result?.confidence;
@@ -124,18 +173,27 @@
 
 	// --- prompt + speech UI ---------------------------------------------------
 	let logEl = null;
+	let inputEl = null;
+
 	let copyBtn = null;
 	let clearBtn = null;
+	let helpBtn = null;
+	let minimizeBtn = null;
+
+	let micBtn = null;
+	let stopSpeakBtn = null;
+	let submitBtn = null;
+
+	let recognizer = null;
+	let listening = false;
+	let autoSubmitTimer = null;
 
 	function renderLog() {
 		if (!logEl) return;
-		const txt = convoToText();
-		logEl.value = txt;
-		// keep scrolled to bottom
+		logEl.value = convoToText();
 		try {
 			logEl.scrollTop = logEl.scrollHeight;
 		} catch {}
-		// update copy button label briefly (optional)
 	}
 
 	async function copyConversation() {
@@ -144,7 +202,6 @@
 			await navigator.clipboard.writeText(txt);
 			pushConvo("system", "Conversation copied to clipboard.");
 		} catch {
-			// fallback
 			try {
 				const ta = document.createElement("textarea");
 				ta.value = txt;
@@ -160,7 +217,10 @@
 	}
 
 	function clearConversation() {
-		convo.length = 0;
+		convo = [];
+		try {
+			localStorage.removeItem(STORE_KEY);
+		} catch {}
 		pushConvo("system", "Conversation cleared.");
 		renderLog();
 	}
@@ -169,15 +229,46 @@
 		try {
 			window.speechSynthesis?.cancel?.();
 			pushConvo("system", "Stopped speaking.");
-		} catch {
-			// ignore
-		}
+		} catch {}
+	}
+
+	function stopListening() {
+		try {
+			recognizer?.stop?.();
+		} catch {}
+	}
+
+	function speakHelp() {
+		const msg =
+			"Convox Test shortcuts: Alt plus L to listen or stop. Alt plus S to submit. Alt plus X to stop speaking. Alt plus C to copy. Alt plus R to clear. Alt plus H for help. Alt plus M to minimize or show. Alt plus D to diagnose. Alt plus F to focus the command box.";
+		pushConvo("system", "Help: " + msg);
+		try {
+			// speak through native TTS so it shows in transcript too (captured)
+			const u = new SpeechSynthesisUtterance(msg);
+			window.speechSynthesis.cancel();
+			window.speechSynthesis.speak(u);
+		} catch {}
+	}
+
+	function setMinimized(container, content, minimized) {
+		content.style.display = minimized ? "none" : "block";
+		minimizeBtn.textContent = minimized ? "➕ Show" : "➖ Min";
+		saveUIState({ minimized });
+	}
+
+	function focusInput() {
+		try {
+			inputEl?.focus?.();
+		} catch {}
 	}
 
 	function ensureTestUI() {
 		if (document.getElementById("convox-test-container")) return;
 
 		patchTTSOnce();
+
+		const uiSt = loadUIState();
+		const defaultMin = !!uiSt.minimized;
 
 		const container = document.createElement("div");
 		container.id = "convox-test-container";
@@ -192,18 +283,61 @@
 			borderRadius: "12px",
 			boxShadow: "0 2px 10px rgba(0,0,0,0.25)",
 			padding: "8px",
-			width: "320px",
+			width: "360px",
 		});
+
+		// Header row with buttons
+		const headerRow = document.createElement("div");
+		Object.assign(headerRow.style, { display: "flex", alignItems: "center", justifyContent: "space-between" });
+		container.appendChild(headerRow);
 
 		const header = document.createElement("div");
 		header.textContent = "Convox Test 🔊";
-		header.style.cursor = "pointer";
 		header.style.fontWeight = "bold";
-		container.appendChild(header);
+		header.style.userSelect = "none";
+		headerRow.appendChild(header);
+
+		const headerBtns = document.createElement("div");
+		Object.assign(headerBtns.style, { display: "flex", gap: "6px" });
+		headerRow.appendChild(headerBtns);
+
+		helpBtn = document.createElement("button");
+		helpBtn.textContent = "❓ Help";
+		Object.assign(helpBtn.style, {
+			padding: "6px",
+			borderRadius: "8px",
+			border: "none",
+			cursor: "pointer",
+			background: "#333",
+			color: "#fff",
+			fontSize: "12px",
+		});
+		helpBtn.title = "Help (Alt+H)";
+		helpBtn.addEventListener("click", speakHelp);
+		headerBtns.appendChild(helpBtn);
+
+		minimizeBtn = document.createElement("button");
+		minimizeBtn.textContent = defaultMin ? "➕ Show" : "➖ Min";
+		Object.assign(minimizeBtn.style, {
+			padding: "6px",
+			borderRadius: "8px",
+			border: "none",
+			cursor: "pointer",
+			background: "#333",
+			color: "#fff",
+			fontSize: "12px",
+		});
+		minimizeBtn.title = "Minimize/Show (Alt+M)";
+		headerBtns.appendChild(minimizeBtn);
 
 		const content = document.createElement("div");
 		content.style.marginTop = "8px";
 		container.appendChild(content);
+
+		minimizeBtn.addEventListener("click", () => {
+			const minimized = content.style.display !== "none";
+			setMinimized(container, content, minimized);
+		});
 
 		// transcript (text form)
 		logEl = document.createElement("textarea");
@@ -212,7 +346,7 @@
 		logEl.placeholder = "Conversation transcript will appear here…";
 		Object.assign(logEl.style, {
 			width: "100%",
-			height: "140px",
+			height: "160px",
 			resize: "none",
 			padding: "8px",
 			borderRadius: "8px",
@@ -225,7 +359,7 @@
 		});
 		content.appendChild(logEl);
 
-		// row: copy / clear
+		// row: copy / clear / diagnose
 		const row1 = document.createElement("div");
 		Object.assign(row1.style, { display: "flex", gap: "6px", marginBottom: "8px" });
 		content.appendChild(row1);
@@ -234,13 +368,14 @@
 		copyBtn.textContent = "📋 Copy";
 		Object.assign(copyBtn.style, {
 			flex: "1",
-			padding: "6px",
-			borderRadius: "6px",
+			padding: "8px",
+			borderRadius: "8px",
 			border: "none",
 			cursor: "pointer",
 			background: "#444",
 			color: "#fff",
 		});
+		copyBtn.title = "Copy transcript (Alt+C)";
 		copyBtn.addEventListener("click", copyConversation);
 		row1.appendChild(copyBtn);
 
@@ -248,78 +383,99 @@
 		clearBtn.textContent = "🧹 Clear";
 		Object.assign(clearBtn.style, {
 			flex: "1",
-			padding: "6px",
-			borderRadius: "6px",
+			padding: "8px",
+			borderRadius: "8px",
 			border: "none",
 			cursor: "pointer",
 			background: "#444",
 			color: "#fff",
 		});
+		clearBtn.title = "Clear transcript (Alt+R)";
 		clearBtn.addEventListener("click", clearConversation);
 		row1.appendChild(clearBtn);
 
-		// text input
-		const input = document.createElement("input");
-		input.type = "text";
-		input.placeholder = "Type a command or use mic 🎤";
-		Object.assign(input.style, {
-			width: "100%",
-			padding: "8px",
-			borderRadius: "8px",
-			border: "none",
-			marginBottom: "8px",
-		});
-		content.appendChild(input);
-
-		// mic button
-		const micBtn = document.createElement("button");
-		micBtn.textContent = "🎤 Listen";
-		Object.assign(micBtn.style, {
-			width: "100%",
+		const diagBtn = document.createElement("button");
+		diagBtn.textContent = "🩺 Diagnose";
+		Object.assign(diagBtn.style, {
+			flex: "1",
 			padding: "8px",
 			borderRadius: "8px",
 			border: "none",
 			cursor: "pointer",
 			background: "#444",
 			color: "#fff",
+		});
+		diagBtn.title = "Diagnose (Alt+D)";
+		diagBtn.addEventListener("click", () => {
+			pushConvo("user", "diagnose");
+			diagnose();
+		});
+		row1.appendChild(diagBtn);
+
+		// text input
+		inputEl = document.createElement("input");
+		inputEl.type = "text";
+		inputEl.placeholder = "Type a command or use mic 🎤";
+		Object.assign(inputEl.style, {
+			width: "100%",
+			padding: "10px",
+			borderRadius: "10px",
+			border: "none",
 			marginBottom: "8px",
 		});
+		inputEl.title = "Focus command box (Alt+F)";
+		content.appendChild(inputEl);
+
+		// mic button
+		micBtn = document.createElement("button");
+		micBtn.textContent = "🎤 Listen";
+		Object.assign(micBtn.style, {
+			width: "100%",
+			padding: "10px",
+			borderRadius: "10px",
+			border: "none",
+			cursor: "pointer",
+			background: "#444",
+			color: "#fff",
+			marginBottom: "8px",
+		});
+		micBtn.title = "Listen/Stop listening (Alt+L)";
 		content.appendChild(micBtn);
 
-		// STOP SPEAKING button (what you asked for)
-		const stopSpeakBtn = document.createElement("button");
+		// stop speaking
+		stopSpeakBtn = document.createElement("button");
 		stopSpeakBtn.textContent = "🛑 Stop speaking";
 		Object.assign(stopSpeakBtn.style, {
 			width: "100%",
-			padding: "8px",
-			borderRadius: "8px",
+			padding: "10px",
+			borderRadius: "10px",
 			border: "none",
 			cursor: "pointer",
 			background: "#b00020",
 			color: "#fff",
 			marginBottom: "8px",
 		});
-		stopSpeakBtn.addEventListener("click", () => {
-			stopSpeaking();
-		});
+		stopSpeakBtn.title = "Stop speaking (Alt+X)";
+		stopSpeakBtn.addEventListener("click", stopSpeaking);
 		content.appendChild(stopSpeakBtn);
 
-		// submit button
-		const submitBtn = document.createElement("button");
+		// submit
+		submitBtn = document.createElement("button");
 		submitBtn.textContent = "✅ Submit";
 		Object.assign(submitBtn.style, {
 			width: "100%",
-			padding: "8px",
-			borderRadius: "8px",
+			padding: "10px",
+			borderRadius: "10px",
 			border: "none",
 			cursor: "pointer",
 			background: "#28a745",
 			color: "#fff",
 		});
+		submitBtn.title = "Submit command (Alt+S)";
 		content.appendChild(submitBtn);
 
 		function submitCommand() {
-			const text = input.value.trim();
+			const text = inputEl.value.trim();
 			if (!text) return;
 
 			if (text.toLowerCase().includes("diagnose")) {
@@ -328,115 +484,151 @@
 			} else {
 				runUtterance(text);
 			}
-			input.value = "";
+			inputEl.value = "";
 		}
 
 		submitBtn.addEventListener("click", submitCommand);
 
-		// collapse toggle
-		let collapsed = false;
-		header.addEventListener("click", () => {
-			collapsed = !collapsed;
-			content.style.display = collapsed ? "none" : "block";
+		// Enter submits
+		inputEl.addEventListener("keydown", (e) => {
+			if (e.key === "Enter") submitCommand();
 		});
 
-		document.body.appendChild(container);
-
-		// initial log line
-		pushConvo("system", "Convox Test UI ready. Your commands + Convox speech will be logged here.");
-
-		// --- speech recognition ---
+		// speech recognition init
 		const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 		if (!SpeechRecognition) {
 			logToast("SpeechRecognition not supported in this browser.");
 			micBtn.disabled = true;
 			pushConvo("system", "SpeechRecognition not supported in this browser.");
-			return;
-		}
+		} else {
+			recognizer = new SpeechRecognition();
+			recognizer.continuous = false;
+			recognizer.interimResults = true;
+			recognizer.lang = "en-US";
 
-		const recognizer = new SpeechRecognition();
-		recognizer.continuous = false;
-		recognizer.interimResults = true;
-		recognizer.lang = "en-US";
-
-		let listening = false;
-		let autoSubmitTimer = null;
-
-		function stopListening() {
-			try {
-				recognizer.stop();
-			} catch {}
-		}
-
-		// --- hotkey: Cmd/Ctrl + P to toggle listening ---
-		document.addEventListener("keydown", (e) => {
-			try {
-				if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "p") {
-					e.preventDefault();
-					if (!listening) recognizer.start();
-					else stopListening();
+			micBtn.addEventListener("click", () => {
+				if (!listening) {
+					try {
+						recognizer.start();
+					} catch {}
+				} else {
+					stopListening();
 				}
-			} catch (err) {
-				console.warn("[Convox Test] hotkey error:", err);
+			});
+
+			recognizer.addEventListener("start", () => {
+				listening = true;
+				micBtn.textContent = "🛑 Stop";
+				inputEl.value = "";
+				pushConvo("system", "Listening…");
+			});
+
+			recognizer.addEventListener("end", () => {
+				listening = false;
+				micBtn.textContent = "🎤 Listen";
+				if (autoSubmitTimer) clearTimeout(autoSubmitTimer);
+				autoSubmitTimer = null;
+				pushConvo("system", "Stopped listening.");
+			});
+
+			recognizer.addEventListener("result", (event) => {
+				const transcript = Array.from(event.results)
+					.map((r) => r[0].transcript)
+					.join("");
+				inputEl.value = transcript;
+
+				if (autoSubmitTimer) clearTimeout(autoSubmitTimer);
+				autoSubmitTimer = setTimeout(() => {
+					submitCommand();
+				}, 3000);
+			});
+
+			recognizer.addEventListener("speechend", () => stopListening());
+		}
+
+		// --- shortcuts ---------------------------------------------------------
+		// Alt+L listen/stop, Alt+S submit, Alt+X stop speaking
+		// Alt+C copy, Alt+R clear, Alt+H help, Alt+M minimize/show
+		// Alt+D diagnose, Alt+F focus input
+		document.addEventListener("keydown", (e) => {
+			// Don't steal shortcuts while user is typing unless it's Alt+...
+			if (!e.altKey) return;
+
+			const k = (e.key || "").toLowerCase();
+			if (!k) return;
+
+			// prevent browser alt-menu triggers in some cases
+			e.preventDefault();
+
+			if (k === "l") {
+				// listen toggle
+				if (!recognizer) return;
+				if (!listening) {
+					try {
+						recognizer.start();
+					} catch {}
+				} else {
+					stopListening();
+				}
+				return;
+			}
+
+			if (k === "s") {
+				submitCommand();
+				return;
+			}
+
+			if (k === "x") {
+				stopSpeaking();
+				return;
+			}
+
+			if (k === "c") {
+				copyConversation();
+				return;
+			}
+
+			if (k === "r") {
+				clearConversation();
+				return;
+			}
+
+			if (k === "h") {
+				speakHelp();
+				return;
+			}
+
+			if (k === "m") {
+				const minimized = content.style.display !== "none";
+				setMinimized(container, content, minimized);
+				return;
+			}
+
+			if (k === "d") {
+				pushConvo("user", "diagnose");
+				diagnose();
+				return;
+			}
+
+			if (k === "f") {
+				focusInput();
+				return;
 			}
 		});
 
-		micBtn.addEventListener("click", () => {
-			if (!listening) recognizer.start();
-			else stopListening();
-		});
+		// apply minimized state on load
+		setMinimized(container, content, defaultMin);
 
-		recognizer.addEventListener("start", () => {
-			listening = true;
-			micBtn.textContent = "🛑 Stop";
-			input.value = "";
-			pushConvo("system", "Listening…");
-		});
+		document.body.appendChild(container);
 
-		recognizer.addEventListener("end", () => {
-			listening = false;
-			micBtn.textContent = "🎤 Listen";
-			if (autoSubmitTimer) clearTimeout(autoSubmitTimer);
-			autoSubmitTimer = null;
-			pushConvo("system", "Stopped listening.");
-		});
+		// initial system line only once per session load (don't spam if UI re-injects)
+		pushConvo("system", "Convox Test UI ready. Logs persist across pages until you press Clear.");
 
-		recognizer.addEventListener("result", (event) => {
-			const transcript = Array.from(event.results)
-				.map((r) => r[0].transcript)
-				.join("");
-			input.value = transcript;
-
-			// reset auto-submit timer
-			if (autoSubmitTimer) clearTimeout(autoSubmitTimer);
-			autoSubmitTimer = setTimeout(() => {
-				submitCommand();
-			}, 3000); // 3 seconds of silence
-		});
-
-		recognizer.addEventListener("speechend", () => {
-			stopListening();
-		});
-
-		// handle enter key
-		input.addEventListener("keydown", (e) => {
-			if (e.key === "Enter") submitCommand();
-		});
+		// render existing logs
+		renderLog();
 	}
 
-	// --- hotkey (Cmd/Ctrl/Option + K) -----------------------------------------
-	document.addEventListener("keydown", async (e) => {
-		try {
-			if ((e.metaKey || e.ctrlKey || e.altKey) && e.key.toLowerCase() === "k") {
-				e.preventDefault();
-				const input = document.querySelector("#convox-test-container input");
-				if (input) input.focus();
-			}
-		} catch (err) {
-			console.warn("[Convox Test] hotkey handler error:", err);
-		}
-	});
-
+	// Create UI after DOM
 	if (document.readyState === "loading") {
 		document.addEventListener("DOMContentLoaded", ensureTestUI, { once: true });
 	} else {
