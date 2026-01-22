@@ -22,12 +22,12 @@
   ],
 
   "web_accessible_resources": [
-    {
-      "resources": [
-        "lib/actions.js",
-        "lib/intent.js"
-      ],
-      "matches": ["<all_urls>"]
-    }
-  ]
+  {
+    "resources": [
+      "lib/*.js"
+    ],
+    "matches": ["<all_urls>"]
+  }
+]
+
 }
