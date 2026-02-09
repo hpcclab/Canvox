@@ -3,7 +3,7 @@
 
 /**
  * PageContext describes the important stuff we can read.
- *
+ *m
  * type: 'assignment' | 'announcement' | 'course_home' | 'generic'
  * sections: [{ id, heading, text }]
  */
