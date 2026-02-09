@@ -1,36 +1,34 @@
 {
-	"name": "Canvox",
-	"description": "Canvox is an accessibility tool for blind and the visually impaired students to help navigate the instruction software Canvas.",
-	"version": "1.0",
-	"manifest_version": 3,
-	"icons": {
-		"16": "images/icons/icon16.png",
-		"48": "images/icons/icon48.png",
-		"128": "images/icons/icon128.png"
-	},
-	"action": {
-		"default_popup": "src/view/popup.html",
-		"default_title": "Canvox\n An accessibility tool for blind and the visually impaired students"
-	},
-	"content_scripts": [
-		{
-			"js": ["content.js"],
-			"matches": ["https://*.instructure.com/*", "https://bcourses.berkeley.edu/*"]
-		}
-	],
-	"background": {
-		"service_worker": "background.js",
-		"type": "module"
-	},
-	"permissions": ["storage", "activeTab", "scripting"],
-	"web_accessible_resources": [
-		{
-			"resources": ["src/**/*.js"],
-			"matches": ["<all_urls>"]
-		},
-		{
-			"resources": ["audios/*.mp3"],
-			"matches": ["<all_urls>"]
-		}
-	]
+  "manifest_version": 3,
+  "name": "Convox",
+  "description": "Accessible voice navigation and reading assistant",
+  "version": "1.0.1",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content_test.js"
+      ]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "lib/*.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
 }

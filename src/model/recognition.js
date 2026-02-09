@@ -42,6 +42,24 @@ function initRecognition(recognitionState, deviceId = null) {
 			// IMPORTANT: This is where we call pass control to the actions.js script
 			// to handle the speech commands. The actions function should be defined in actions.js.
 			await routeActions(transcript, recognitionState);
+
+			const m = transcript.match(/(?:open\s+)?(.+?)\s+assignments?$/i);
+			if (m) {
+				const courseName = m[1].trim();
+				chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+					if (!tabs || !tabs[0]) return;
+					chrome.tabs.sendMessage(tabs[0].id, { action: "navigateToCourseAssignments", courseName }, (resp) => {
+						if (chrome.runtime.lastError) {
+							// not on a matched page or content script not injected
+							console.warn("sendMessage error:", chrome.runtime.lastError.message);
+						} else if (resp && resp.success) {
+							// optional: give user feedback via your tts helper
+						} else {
+							// handle course not found
+						}
+					});
+				});
+			}
 		}, 1000);
 	};
 
