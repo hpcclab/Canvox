@@ -36,6 +36,67 @@ function normalize(text) {
 	return (text || "").replace(/\s+/g, " ").trim();
 }
 
+
+// Prefer extracting meaningful visible content (Canvas pages can have lots of chrome).
+// We score candidate containers and pick the best (usually the body under the title).
+function extractBestText(doc, selectors = [], fallbackNodes = []) {
+	const candidates = [];
+
+	// Gather nodes from selectors
+	for (const sel of selectors) {
+		try {
+			doc.querySelectorAll(sel).forEach((n) => candidates.push(n));
+		} catch (_) {
+			// ignore invalid selectors
+		}
+	}
+
+	// Add fallbacks (dedup)
+	for (const n of fallbackNodes) if (n) candidates.push(n);
+
+	const seen = new Set();
+	const unique = [];
+	for (const n of candidates) {
+		if (!n) continue;
+		if (seen.has(n)) continue;
+		seen.add(n);
+		unique.push(n);
+	}
+
+	let bestText = "";
+	for (const node of unique) {
+		const raw = node.innerText || node.textContent || "";
+		const cleaned = cleanCanvasText(raw);
+		// Prefer substantial blocks
+		if (cleaned.length > bestText.length) bestText = cleaned;
+	}
+
+	return bestText;
+}
+
+// Remove common Canvas UI noise so summaries focus on the actual announcement/assignment text.
+function cleanCanvasText(text) {
+	let t = (text || "").replace(/\s+/g, " ").trim();
+	if (!t) return "";
+
+	// Drop URLs (they're often long and hurt summarization quality)
+	t = t.replace(/https?:\/\/\S+/gi, "");
+
+	// Drop common boilerplate and UI strings
+	t = t.replace(/\bThis topic is closed for comments\.?/gi, "");
+	t = t.replace(/\bCollapse Threads\b/gi, "");
+	t = t.replace(/\bOldest First\b/gi, "");
+
+	// Remove breadcrumb-like lines (very common on Canvas and not useful)
+	// e.g. "COURSE-123 > Announcements > Something"
+	t = t.replace(/\b[^\n>]{2,}\s*>\s*Announcements\s*>\s*[^\n]{2,}/gi, "");
+
+	// Remove greetings / sign-offs that often dominate short messages
+	t = t.replace(/^(dear|hello|hi)\s+[^,.!]{0,40}[,.!]?\s*/i, "");
+	t = t.replace(/\s*(sincerely|regards|thanks|thank you)[,\s]*[^.]{0,60}$/i, "");
+
+	return t.replace(/\s+/g, " ").trim();
+}
 // ===== ASSIGNMENT PAGES =====
 function getAssignmentContext(doc, base) {
 	const ctx = { ...base, type: "assignment" };

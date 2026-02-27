@@ -24,12 +24,15 @@ export async function route(transcript, pageContext) {
   // =====================
 
   if (t.includes("submit assignment")) {
-    await submitAssignmentCommand(pageContext);
+		await submitAssignmentCommand(pageContext);
     return;
   }
 
-  if (t.includes("summary")) {
-    await quickSummaryCommand(pageContext);
+	// Trigger on: "summarize", "summarize page", "summarize this", and "summary"
+	// (The intent layer in /lib can be more sophisticated, but this keeps Part C
+	// commands working from both typed input and speech.)
+	if (t.includes("summarize") || t.includes("summary")) {
+		await quickSummaryCommand(pageContext);
     return;
   }
 
@@ -76,4 +79,19 @@ export async function route(transcript, pageContext) {
   }
 
   narrate(`Sorry, I did not understand "${transcript}"`);
+}
+
+// =============================================================================
+// Primary entrypoint used by SpeechRecognition and typed input.
+//
+// Historically, this file exported `route()` with a different signature.
+// Other modules currently import `routeActions()`. We provide it here to keep
+// everything wired together without removing older code.
+// =============================================================================
+
+export async function routeActions(transcript, recognitionState) {
+	// For the Part C reader commands, we want the recognitionState so TTS can play.
+	// The older route() signature expects `pageContext`, and our Part C wrappers
+	// accept the recognitionState directly.
+	return route(transcript, recognitionState);
 }
