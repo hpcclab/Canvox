@@ -9,7 +9,6 @@ let lastMessage = null;
 // Arrays to store message data
 let messageObjects = [];
 
-
 function clickComposeMessage(recognitionState, attempt = 1) {
 	const maxAttempts = 5; // try 5 times
 	const delay = 1000; // 1 second between attempts
@@ -21,16 +20,13 @@ function clickComposeMessage(recognitionState, attempt = 1) {
 	}
 
 	// Find button by visible text
-	const composeBtn = Array.from(document.querySelectorAll("button"))
-		.find(btn => btn.innerText.trim() === "Compose");
+	const composeBtn = Array.from(document.querySelectorAll("button")).find((btn) => btn.innerText.trim() === "Compose");
 
 	if (composeBtn) {
 		console.log("Compose button found:", composeBtn);
 
 		// Synthetic click for React
-		composeBtn.dispatchEvent(
-			new MouseEvent("click", { bubbles: true, cancelable: true })
-		);
+		composeBtn.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
 
 		setTimeout(() => {
 			textToSpeech("Opening compose message.", recognitionState);
@@ -119,8 +115,7 @@ function wasAnInboxAction(transcript, recognitionState) {
 	const lastMessagePattern =
 		/\b(show|see|view|get|check|read|display|open|access)\b.+\b(last|latest|recent|newest)\b.+\b(message|msg|email|mail|conversation|inbox item)\b$/i;
 
-	const composePattern =
-		/\b(compose|write|send|create)\b.+\b(message|email|mail)\b/i;
+	const composePattern = /\b(compose|write|send|create)\b.+\b(message|email|mail)\b/i;
 
 	if (composePattern.test(transcript)) {
 		clickComposeMessage(recognitionState);

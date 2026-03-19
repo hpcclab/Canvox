@@ -1,6 +1,6 @@
 {
 	"devDependencies": {
-		"prettier": "^3.8.0"
+		"prettier": "^3.8.1"
 	},
 	"dependencies": {
 		"@mlc-ai/web-llm": "^0.2.80"

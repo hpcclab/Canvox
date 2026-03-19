@@ -1,34 +1,20 @@
 {
-  "manifest_version": 3,
-  "name": "Convox",
-  "description": "Accessible voice navigation and reading assistant",
-  "version": "1.0.1",
-  "permissions": [
-    "activeTab",
-    "scripting",
-    "storage"
-  ],
-  "host_permissions": [
-    "<all_urls>"
-  ],
-  "content_scripts": [
-    {
-      "matches": [
-        "<all_urls>"
-      ],
-      "js": [
-        "content_test.js"
-      ]
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": [
-        "lib/*.js"
-      ],
-      "matches": [
-        "<all_urls>"
-      ]
-    }
-  ]
+	"manifest_version": 3,
+	"name": "Convox",
+	"description": "Accessible voice navigation and reading assistant",
+	"version": "1.0.1",
+	"permissions": ["activeTab", "scripting", "storage"],
+	"host_permissions": ["<all_urls>"],
+	"content_scripts": [
+		{
+			"matches": ["<all_urls>"],
+			"js": ["content_test.js"]
+		}
+	],
+	"web_accessible_resources": [
+		{
+			"resources": ["lib/*.js"],
+			"matches": ["<all_urls>"]
+		}
+	]
 }
