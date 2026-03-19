@@ -209,6 +209,33 @@
     }
   }
 
+  let autoResumeBootstrapped = false;
+  let pendingReadBootTimer = null;
+  async function bootstrapAutoResume() {
+    if (autoResumeBootstrapped) return;
+    autoResumeBootstrapped = true;
+    try {
+      const { initAutoResume, resumePendingAnnouncementRead } = await safeImportActions();
+      initAutoResume?.();
+      // Run once immediately on page boot so pending announcement reads are not missed.
+      await resumePendingAnnouncementRead?.();
+      // Short retry window: Canvas often updates DOM a bit after navigation.
+      let tries = 0;
+      pendingReadBootTimer = setInterval(async () => {
+        tries += 1;
+        try {
+          await resumePendingAnnouncementRead?.();
+        } catch {}
+        if (tries >= 8 && pendingReadBootTimer) {
+          clearInterval(pendingReadBootTimer);
+          pendingReadBootTimer = null;
+        }
+      }, 700);
+    } catch {
+      // safeImportActions already reports import failures to the transcript.
+    }
+  }
+
   // ===========================================================================
   // Diagnose
   // ===========================================================================
@@ -627,6 +654,7 @@
     if (document.getElementById("convox-test-container")) return;
 
     patchTTSOnce();
+    bootstrapAutoResume();
 
     const uiSt = loadUIState();
     const minimized = !!uiSt.minimized;
