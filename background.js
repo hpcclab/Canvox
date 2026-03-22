@@ -5,7 +5,7 @@ import { getSettingWithDefault, DEFAULT_SETTINGS } from "./src/model/settings.js
 // Convox MV3 Service Worker / Background
 // - Initializes default settings on install
 // - Answers popup/content queries (mic status)
-// - ✅ Performs hard, top-level tab navigation for course opens (fixes “pending click fires later”)
+// - Performs hard, top-level tab navigation (reliable navigation)
 // =============================================================================
 
 // Listen for installation
@@ -22,14 +22,12 @@ function getSenderTabId(sender) {
 	return sender?.tab?.id ?? null;
 }
 
-// Small helper: normalize/validate URL (allow relative to sender origin)
+// Small helper: normalize/validate URL
 function normalizeUrl(rawUrl, sender) {
 	try {
 		const sUrl = String(rawUrl || "").trim();
 		if (!sUrl) return null;
 
-		// If it's already absolute, this will work.
-		// If it's relative, resolve against sender tab URL (best), then fallback to location.origin.
 		const base =
 			(sender?.tab?.url && String(sender.tab.url)) ||
 			(location?.origin ? String(location.origin) : "https://canvas.instructure.com");
@@ -40,23 +38,21 @@ function normalizeUrl(rawUrl, sender) {
 	}
 }
 
-// Set up message passing between popup and content scripts if needed
+// Message handler
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 	try {
 		// ------------------------------------------------------------
-		// Existing: microphone status
+		// Microphone status
 		// ------------------------------------------------------------
 		if (message?.action === "getMicrophoneStatus") {
 			chrome.storage.sync.get("microphoneActive", (data) => {
 				sendResponse({ microphoneActive: data?.microphoneActive || false });
 			});
-			return true; // async
+			return true;
 		}
 
 		// ------------------------------------------------------------
-		// ✅ NEW: Hard navigate the current tab (top-level) — reliable
-		// Content script should call:
-		// chrome.runtime.sendMessage({ action: "CONVOX_NAVIGATE", url })
+		// Hard navigation 
 		// ------------------------------------------------------------
 		if (message?.action === "CONVOX_NAVIGATE") {
 			const tabId = getSenderTabId(sender);
@@ -80,12 +76,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 				}
 			});
 
-			return true; // async
+			return true;
 		}
 
 		// ------------------------------------------------------------
-		// (Optional) You can add more actions later...
+		// Open settings page
 		// ------------------------------------------------------------
+		if (message?.action === "openOptionsPage") {
+			const url = chrome.runtime.getURL("options.html?autofocus=true");
+			chrome.tabs.create({ url });
+			return false;
+		}
+
 	} catch (e) {
 		sendResponse({ ok: false, error: String(e?.message || e) });
 	}

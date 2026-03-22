@@ -1,9 +1,8 @@
-// src/part c/domctx.js
 "use strict";
 
 /**
  * PageContext describes the important stuff we can read.
- *m
+ *
  * type: 'assignment' | 'announcement' | 'course_home' | 'generic'
  * sections: [{ id, heading, text }]
  */
@@ -36,22 +35,17 @@ function normalize(text) {
 	return (text || "").replace(/\s+/g, " ").trim();
 }
 
-
 // Prefer extracting meaningful visible content (Canvas pages can have lots of chrome).
 // We score candidate containers and pick the best (usually the body under the title).
 function extractBestText(doc, selectors = [], fallbackNodes = []) {
 	const candidates = [];
 
-	// Gather nodes from selectors
 	for (const sel of selectors) {
 		try {
 			doc.querySelectorAll(sel).forEach((n) => candidates.push(n));
-		} catch (_) {
-			// ignore invalid selectors
-		}
+		} catch (_) { }
 	}
 
-	// Add fallbacks (dedup)
 	for (const n of fallbackNodes) if (n) candidates.push(n);
 
 	const seen = new Set();
@@ -67,7 +61,6 @@ function extractBestText(doc, selectors = [], fallbackNodes = []) {
 	for (const node of unique) {
 		const raw = node.innerText || node.textContent || "";
 		const cleaned = cleanCanvasText(raw);
-		// Prefer substantial blocks
 		if (cleaned.length > bestText.length) bestText = cleaned;
 	}
 
@@ -79,38 +72,28 @@ function cleanCanvasText(text) {
 	let t = (text || "").replace(/\s+/g, " ").trim();
 	if (!t) return "";
 
-	// Drop URLs (they're often long and hurt summarization quality)
 	t = t.replace(/https?:\/\/\S+/gi, "");
-
-	// Drop common boilerplate and UI strings
 	t = t.replace(/\bThis topic is closed for comments\.?/gi, "");
 	t = t.replace(/\bCollapse Threads\b/gi, "");
 	t = t.replace(/\bOldest First\b/gi, "");
-
-	// Remove breadcrumb-like lines (very common on Canvas and not useful)
-	// e.g. "COURSE-123 > Announcements > Something"
 	t = t.replace(/\b[^\n>]{2,}\s*>\s*Announcements\s*>\s*[^\n]{2,}/gi, "");
-
-	// Remove greetings / sign-offs that often dominate short messages
 	t = t.replace(/^(dear|hello|hi)\s+[^,.!]{0,40}[,.!]?\s*/i, "");
 	t = t.replace(/\s*(sincerely|regards|thanks|thank you)[,\s]*[^.]{0,60}$/i, "");
 
 	return t.replace(/\s+/g, " ").trim();
 }
+
 // ===== ASSIGNMENT PAGES =====
 function getAssignmentContext(doc, base) {
 	const ctx = { ...base, type: "assignment" };
 
-	// Assignment title (usually an <h1>)
 	const h1 = doc.querySelector("h1");
 	ctx.title = normalize(h1?.textContent);
 
-	// Course name (Canvas breadcrumbs)
 	const breadcrumbCourse =
 		doc.querySelector('[aria-label="Breadcrumbs"] a') || doc.querySelector(".ic-app-course-menu__header-title");
 	ctx.courseName = normalize(breadcrumbCourse?.textContent);
 
-	// Due date: Canvas has a few possible patterns
 	const dueElement =
 		doc.querySelector('[data-testid="assignment-due-date"]') ||
 		doc.querySelector(".assignment-date-due") ||
@@ -119,7 +102,6 @@ function getAssignmentContext(doc, base) {
 
 	ctx.dueDate = normalize(dueElement?.textContent);
 
-	// Main instructions / description
 	const descElement =
 		doc.querySelector('[data-testid="assignment-description"]') ||
 		doc.querySelector(".description") ||
@@ -136,7 +118,6 @@ function getAssignmentContext(doc, base) {
 		});
 	}
 
-	// Rubric, if present
 	const rubric =
 		doc.querySelector("#rubric_full") ||
 		doc.querySelector(".rubric_container") ||
