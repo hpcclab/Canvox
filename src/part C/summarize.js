@@ -1,3 +1,6 @@
+// src/part c/summarize.js
+"use strict";
+
 "use strict";
 
 // =============================================================================
@@ -38,6 +41,20 @@ function splitSentences(text) {
 		.filter(Boolean);
 }
 
+/**
+ * Quick summary: naive but effective –
+ * take first N non-trivial sentences.
+ */
+export function quickSummary(text, maxSentences = 3) {
+	const sentences = splitSentences(text);
+	const filtered = sentences.filter((s) => s.length > 20); // skip very short bits
+	return filtered.slice(0, maxSentences).join(" ");
+}
+
+/**
+ * Chunk long text for TTS, roughly by character limit.
+ * You can tweak maxChars based on how long you want each spoken piece to be.
+ */
 function stripUrls(text) {
 	return String(text || "")
 		.replace(/https?:\/\/\S+/gi, "")

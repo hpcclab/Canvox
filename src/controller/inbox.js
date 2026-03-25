@@ -9,6 +9,42 @@ let lastMessage = null;
 // Arrays to store message data
 let messageObjects = [];
 
+function clickComposeMessage(recognitionState, attempt = 1) {
+	const maxAttempts = 5; // try 5 times
+	const delay = 1000; // 1 second between attempts
+
+	// Only work if inside inbox
+	if (!window.location.href.includes("conversations")) {
+		console.warn("Not inside Inbox page.");
+		return;
+	}
+
+	// Find button by visible text
+	const composeBtn = Array.from(document.querySelectorAll("button")).find((btn) => btn.innerText.trim() === "Compose");
+
+	if (composeBtn) {
+		console.log("Compose button found:", composeBtn);
+
+		// Synthetic click for React
+		composeBtn.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+
+		setTimeout(() => {
+			textToSpeech("Opening compose message.", recognitionState);
+		}, 500);
+
+		return;
+	}
+
+	// If not found, retry after delay
+	if (attempt <= maxAttempts) {
+		console.log(`Compose button not found, retrying... attempt ${attempt}`);
+		setTimeout(() => clickComposeMessage(recognitionState, attempt + 1), delay);
+	} else {
+		console.warn("Compose button could not be found after multiple attempts.");
+		textToSpeech("Sorry, I cannot open the compose box right now.", recognitionState);
+	}
+}
+
 // Assigns message elements to their respective variables and extracts message data
 function assignMessages() {
 	// Get all messages with class css-138gh4t-view
@@ -79,6 +115,13 @@ function wasAnInboxAction(transcript, recognitionState) {
 	const lastMessagePattern =
 		/\b(show|see|view|get|check|read|display|open|access)\b.+\b(last|latest|recent|newest)\b.+\b(message|msg|email|mail|conversation|inbox item)\b$/i;
 
+	const composePattern = /\b(compose|write|send|create)\b.+\b(message|email|mail)\b/i;
+
+	if (composePattern.test(transcript)) {
+		clickComposeMessage(recognitionState);
+		return true;
+	}
+
 	if (lastMessagePattern.test(transcript)) {
 		clickLastMessage(recognitionState);
 		return true;
@@ -86,7 +129,6 @@ function wasAnInboxAction(transcript, recognitionState) {
 
 	return false;
 }
-
 function clickLastMessage(recognitionState) {
 	if (!lastMessage) {
 		console.warn("No last message found to click.");

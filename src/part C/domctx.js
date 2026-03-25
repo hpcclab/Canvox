@@ -1,3 +1,4 @@
+// src/part c/domctx.js
 "use strict";
 
 /**
@@ -87,8 +88,10 @@ function cleanCanvasText(text) {
 function getAssignmentContext(doc, base) {
 	const ctx = { ...base, type: "assignment" };
 
+	// Assignment title (usually an <h1>)
 	const h1 = doc.querySelector("h1");
 	ctx.title = normalize(h1?.textContent);
+
 
 	const breadcrumbCourse =
 		doc.querySelector('[aria-label="Breadcrumbs"] a') || doc.querySelector(".ic-app-course-menu__header-title");
