@@ -11,10 +11,38 @@
 			"js": ["content_test.js"]
 		}
 	],
-	"web_accessible_resources": [
-		{
-			"resources": ["lib/*.js"],
-			"matches": ["<all_urls>"]
-		}
-	]
-}
+	
+  "web_accessible_resources": [
+  {
+    "resources": [
+      "lib/*.js"
+  "version": "1.0.1",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content_test.js"
+      ]
+    }
+  ],
+  "web_accessible_resources": [
+  {
+    "resources": [
+      "lib/*.js",
+      "src/controller/*.js",
+      "src/model/*.js"
+    ],
+    "matches": ["<all_urls>"]
+  }
+]

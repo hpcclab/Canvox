@@ -36,6 +36,54 @@ function normalize(text) {
 	return (text || "").replace(/\s+/g, " ").trim();
 }
 
+// Prefer extracting meaningful visible content (Canvas pages can have lots of chrome).
+// We score candidate containers and pick the best (usually the body under the title).
+function extractBestText(doc, selectors = [], fallbackNodes = []) {
+	const candidates = [];
+
+	for (const sel of selectors) {
+		try {
+			doc.querySelectorAll(sel).forEach((n) => candidates.push(n));
+		} catch (_) { }
+	}
+
+	for (const n of fallbackNodes) if (n) candidates.push(n);
+
+	const seen = new Set();
+	const unique = [];
+	for (const n of candidates) {
+		if (!n) continue;
+		if (seen.has(n)) continue;
+		seen.add(n);
+		unique.push(n);
+	}
+
+	let bestText = "";
+	for (const node of unique) {
+		const raw = node.innerText || node.textContent || "";
+		const cleaned = cleanCanvasText(raw);
+		if (cleaned.length > bestText.length) bestText = cleaned;
+	}
+
+	return bestText;
+}
+
+// Remove common Canvas UI noise so summaries focus on the actual announcement/assignment text.
+function cleanCanvasText(text) {
+	let t = (text || "").replace(/\s+/g, " ").trim();
+	if (!t) return "";
+
+	t = t.replace(/https?:\/\/\S+/gi, "");
+	t = t.replace(/\bThis topic is closed for comments\.?/gi, "");
+	t = t.replace(/\bCollapse Threads\b/gi, "");
+	t = t.replace(/\bOldest First\b/gi, "");
+	t = t.replace(/\b[^\n>]{2,}\s*>\s*Announcements\s*>\s*[^\n]{2,}/gi, "");
+	t = t.replace(/^(dear|hello|hi)\s+[^,.!]{0,40}[,.!]?\s*/i, "");
+	t = t.replace(/\s*(sincerely|regards|thanks|thank you)[,\s]*[^.]{0,60}$/i, "");
+
+	return t.replace(/\s+/g, " ").trim();
+}
+
 // ===== ASSIGNMENT PAGES =====
 function getAssignmentContext(doc, base) {
 	const ctx = { ...base, type: "assignment" };
@@ -44,12 +92,11 @@ function getAssignmentContext(doc, base) {
 	const h1 = doc.querySelector("h1");
 	ctx.title = normalize(h1?.textContent);
 
-	// Course name (Canvas breadcrumbs)
+
 	const breadcrumbCourse =
 		doc.querySelector('[aria-label="Breadcrumbs"] a') || doc.querySelector(".ic-app-course-menu__header-title");
 	ctx.courseName = normalize(breadcrumbCourse?.textContent);
 
-	// Due date: Canvas has a few possible patterns
 	const dueElement =
 		doc.querySelector('[data-testid="assignment-due-date"]') ||
 		doc.querySelector(".assignment-date-due") ||
@@ -58,7 +105,6 @@ function getAssignmentContext(doc, base) {
 
 	ctx.dueDate = normalize(dueElement?.textContent);
 
-	// Main instructions / description
 	const descElement =
 		doc.querySelector('[data-testid="assignment-description"]') ||
 		doc.querySelector(".description") ||
@@ -75,7 +121,6 @@ function getAssignmentContext(doc, base) {
 		});
 	}
 
-	// Rubric, if present
 	const rubric =
 		doc.querySelector("#rubric_full") ||
 		doc.querySelector(".rubric_container") ||

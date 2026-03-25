@@ -4,5 +4,6 @@
 	},
 	"dependencies": {
 		"@mlc-ai/web-llm": "^0.2.80"
+		"prettier": "^3.8.0"
 	}
 }

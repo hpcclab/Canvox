@@ -35,7 +35,12 @@ export function readQuickSummary(recognitionState, { refresh = false } = {}) {
 		return;
 	}
 
-	const summary = quickSummary(baseText);
+	// quickSummary() is async because it may use Chrome's on-device Summarizer API.
+	// If the API isn't available, it falls back to a fast heuristic summary.
+	//
+	// Note: this function is not declared async originally, but we can return a
+	// Promise to keep existing call sites working.
+	const summaryPromise = quickSummary(baseText);
 	let prefix = "";
 
 	if (ctx.type === "assignment") {
@@ -48,7 +53,18 @@ export function readQuickSummary(recognitionState, { refresh = false } = {}) {
 		prefix = `Here's a quick summary of ${ctx.title}. `;
 	}
 
-	textToSpeech(prefix + summary, recognitionState);
+	Promise.resolve(summaryPromise)
+		.then((summary) => {
+			if (!summary) {
+				textToSpeech("I couldn't find anything important to summarize on this page.", recognitionState);
+				return;
+			}
+			textToSpeech(prefix + summary, recognitionState);
+		})
+		.catch((e) => {
+			console.warn("Summary generation failed:", e);
+			textToSpeech("Sorry—something went wrong while summarizing this page.", recognitionState);
+		});
 }
 
 /**
@@ -141,4 +157,50 @@ export function readPreviousSection(recognitionState) {
  */
 export function refreshContentContext() {
 	ensureContext(true);
+}
+
+// =============================================================================
+// Compatibility exports
+//
+// Some parts of the codebase (router/controller) import these *Command*-suffixed
+// functions. We keep thin wrappers here so we don't have to change other files.
+// =============================================================================
+
+export async function quickSummaryCommand(recognitionState) {
+	return readQuickSummary(recognitionState);
+}
+
+export async function readFullCommand(recognitionState) {
+	return readFull(recognitionState);
+}
+
+export async function dueDateCommand(recognitionState) {
+	return readDueDate(recognitionState);
+}
+
+export async function nextSectionCommand(recognitionState) {
+	return readNextSection(recognitionState);
+}
+
+export async function prevSectionCommand(recognitionState) {
+	return readPreviousSection(recognitionState);
+}
+
+export async function submitAssignmentCommand(recognitionState) {
+	// Minimal submit helper: try common Canvas submit buttons.
+	// We keep this small and defensive to avoid unexpected clicks.
+	try {
+		const btn = document.querySelector(
+			"button[type='submit'], button#submit_assignment_button, button.Button--primary, input[type='submit']"
+		);
+		if (!btn) {
+			textToSpeech("I can't find a submit button on this page yet.", recognitionState);
+			return;
+		}
+		btn.click();
+		textToSpeech("Submitting now.", recognitionState);
+	} catch (e) {
+		console.warn("submitAssignmentCommand error:", e);
+		textToSpeech("Sorry—something went wrong while trying to submit.", recognitionState);
+	}
 }
