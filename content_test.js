@@ -131,7 +131,8 @@
 
   async function safeImportActions() {
     const ver = chrome?.runtime?.getManifest?.()?.version || "dev";
-    const url = chrome.runtime.getURL(`lib/actions.js?v=${encodeURIComponent(ver)}`);
+    const build = `${ver}-${Date.now()}`;
+    const url = chrome.runtime.getURL(`lib/actions.js?v=${encodeURIComponent(build)}`);
 
     try {
       return await import(url);
@@ -159,6 +160,7 @@
         }
       } else {
         pushConvo("system", `Import failed: ${msg}`, "error");
+        pushConvo("system", `Import URL: ${url}`, "debug");
       }
 
       throw err;
