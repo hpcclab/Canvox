@@ -23,13 +23,15 @@
     }
   ],
   "web_accessible_resources": [
-  {
-    "resources": [
-      "lib/*.js",
-      "src/controller/*.js",
-      "src/model/*.js"
-    ],
-    "matches": ["<all_urls>"]
-  }
-]
+    {
+      "resources": [
+        "lib/*.js",
+        "src/controller/*.js",
+        "src/model/*.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
 }
