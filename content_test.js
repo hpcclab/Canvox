@@ -97,6 +97,14 @@
       .join("\n");
   }
 
+  function isExtensionAlive() {
+    try {
+      return !!(chrome?.runtime?.id);
+    } catch {
+      return false;
+    }
+  }
+
   // ===========================================================================
   // TTS capture (monkey-patch)
   // ===========================================================================
@@ -130,10 +138,13 @@
   let reloadedOnce = false;
 
   async function safeImportActions() {
-    const ver = chrome?.runtime?.getManifest?.()?.version || "dev";
-    const url = chrome.runtime.getURL(`lib/actions.js?v=${encodeURIComponent(ver)}`);
-
     try {
+      if (!isExtensionAlive()) {
+        throw new Error("Extension context invalidated");
+      }
+
+      const ver = chrome?.runtime?.getManifest?.()?.version || "dev";
+      const url = chrome.runtime.getURL(`lib/actions.js?v=${encodeURIComponent(ver)}`);
       return await import(url);
     } catch (err) {
       const msg = String(err?.message || err);
@@ -198,7 +209,6 @@
       const msg = String(e?.message || e);
       pushConvo("system", "Error: " + msg, "error");
 
-      // Keep last error around for sponsor demos
       saveUIState({ lastError: msg, lastErrorAt: new Date().toISOString() });
 
       try {
@@ -243,7 +253,6 @@
   let container = null;
   let content = null;
 
-  // Log UI (now structured, not textarea)
   let logWrap = null;
   let logListEl = null;
   let searchEl = null;
@@ -263,7 +272,6 @@
   let collapseLogBtn = null;
   let collapseControlsBtn = null;
 
-  // Speech recognition
   let recognizer = null;
   let listening = false;
   let autoSubmitTimer = null;
@@ -283,7 +291,7 @@
   }
 
   // ===========================================================================
-  // Render transcript (readable lines + filters + search)
+  // Render transcript
   // ===========================================================================
   function renderLog() {
     if (!logListEl) return;
@@ -350,7 +358,6 @@
 
     logListEl.appendChild(frag);
 
-    // autoscroll if user is near bottom
     try {
       const nearBottom =
         logWrap.scrollHeight - logWrap.scrollTop - logWrap.clientHeight < 120;
@@ -420,7 +427,7 @@
   }
 
   // ===========================================================================
-  // Shortcut help (cross-platform)
+  // Shortcut help
   // ===========================================================================
   function shortcutLabel(key) {
     return `${SHORTCUT_PREFIX}+${key.toUpperCase()}`;
@@ -496,7 +503,7 @@
   }
 
   // ===========================================================================
-  // Drag / Move UI (persist position)
+  // Drag / Move UI
   // ===========================================================================
   function getViewportSafePos(x, y, w, h) {
     const pad = 8;
@@ -531,10 +538,10 @@
     if (!container || !handleEl) return;
 
     let dragging = false;
-    let startX = 0,
-      startY = 0;
-    let startLeft = 0,
-      startTop = 0;
+    let startX = 0;
+    let startY = 0;
+    let startLeft = 0;
+    let startTop = 0;
 
     const onDown = (ev) => {
       if (ev.type === "mousedown" && ev.button !== 0) return;
@@ -599,7 +606,7 @@
   }
 
   // ===========================================================================
-  // Shortcuts — FIXED on Mac (use e.code, not e.key)
+  // Shortcuts
   // ===========================================================================
   function keyCodeForLetter(letter) {
     const ch = String(letter || "").toUpperCase();
@@ -608,7 +615,6 @@
 
   function isShortcutChord(e) {
     if (isMac) {
-      // Allow ⌥ alone OR ⌘⌥ (both feel natural on Mac)
       return e.altKey && !e.ctrlKey;
     }
     return e.ctrlKey && e.altKey && !e.metaKey;
@@ -621,7 +627,7 @@
   }
 
   // ===========================================================================
-  // Build UI (accessible + clean)
+  // Build UI
   // ===========================================================================
   function ensureTestUI() {
     if (document.getElementById("convox-test-container")) return;
@@ -680,7 +686,6 @@
       .cx-divider { height: 1px; background: rgba(255,255,255,0.10); margin: 10px 0; }
       .cx-muted { opacity: 0.8; font-size: 12px; }
 
-      /* Log UI (readable) */
       #convox-test-log-wrap { display:block; }
       .cx-log-top { display:flex; gap:8px; align-items:center; margin-bottom: 8px; flex-wrap: wrap; }
       .cx-search {
@@ -744,7 +749,6 @@
     container.style.bottom = "16px";
     container.style.right = "16px";
 
-    // Header (draggable handle)
     const headerRow = document.createElement("div");
     headerRow.className = "cx-spread";
     container.appendChild(headerRow);
@@ -786,7 +790,6 @@
     minimizeBtn.setAttribute("aria-pressed", minimized ? "true" : "false");
     headerBtns.appendChild(minimizeBtn);
 
-    // Content
     content = document.createElement("div");
     content.style.marginTop = "10px";
     container.appendChild(content);
@@ -796,7 +799,6 @@
       setMinimized(!isHidden);
     });
 
-    // Live region for SR announcements
     announceEl = document.createElement("div");
     announceEl.setAttribute("aria-live", "polite");
     announceEl.setAttribute("aria-atomic", "true");
@@ -805,7 +807,6 @@
     announceEl.style.top = "-9999px";
     container.appendChild(announceEl);
 
-    // Panel toggles
     const toggles = document.createElement("div");
     toggles.className = "cx-row";
     toggles.style.marginBottom = "8px";
@@ -835,7 +836,6 @@
     });
     toggles.appendChild(collapseControlsBtn);
 
-    // Debug toggles row
     const dbgRow = document.createElement("div");
     dbgRow.className = "cx-row";
     dbgRow.style.marginBottom = "8px";
@@ -898,12 +898,10 @@
     });
     dbgRow.appendChild(errorsOnlyBtn);
 
-    // Log wrapper
     logWrap = document.createElement("div");
     logWrap.id = "convox-test-log-wrap";
     content.appendChild(logWrap);
 
-    // Log top bar (search)
     const logTop = document.createElement("div");
     logTop.className = "cx-log-top";
     logWrap.appendChild(logTop);
@@ -916,7 +914,6 @@
     searchEl.addEventListener("input", renderLog);
     logTop.appendChild(searchEl);
 
-    // Actual log list container
     const logBox = document.createElement("div");
     logBox.className = "cx-logbox";
     logBox.setAttribute("role", "log");
@@ -927,7 +924,6 @@
     logListEl = document.createElement("div");
     logBox.appendChild(logListEl);
 
-    // Quick actions row
     const row1 = document.createElement("div");
     row1.className = "cx-row";
     row1.style.marginTop = "8px";
@@ -960,7 +956,6 @@
     });
     row1.appendChild(diagBtn);
 
-    // Controls wrapper
     const controlsWrap = document.createElement("div");
     controlsWrap.id = "convox-test-controls-wrap";
     content.appendChild(controlsWrap);
@@ -1011,11 +1006,9 @@
     hints.textContent = `Tip: Say "due today" / "due this week" / "open course 4901". Press Escape to stop.`;
     controlsWrap.appendChild(hints);
 
-    // Wire minimize/collapse state
     setMinimized(minimized);
     applyCollapsedState();
 
-    // Submit handler
     function submitCommand() {
       const text = (inputEl.value || "").trim();
       if (!text) return;
@@ -1035,7 +1028,6 @@
       if (e.key === "Enter") submitCommand();
     });
 
-    // SpeechRecognition
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       logToast("SpeechRecognition not supported in this browser.");
@@ -1088,16 +1080,13 @@
       recognizer.addEventListener("speechend", () => stopListening());
     }
 
-    // Global shortcuts (capture phase to avoid Canvas swallowing it)
     function onKeydown(e) {
-      // Escape: always stop listening/speaking
       if (e.key === "Escape") {
         stopListening();
         stopSpeaking();
         return;
       }
 
-      // Do not steal keystrokes while typing unless it's an actual shortcut chord
       const inEditable = (el) => {
         if (!el) return false;
         const tag = (el.tagName || "").toLowerCase();
@@ -1166,21 +1155,17 @@
         saveUIState({ verbose: next });
         verboseBtn?.setAttribute("aria-pressed", next ? "true" : "false");
         pushConvo("system", `Verbose logging: ${next ? "ON" : "OFF"}`, "info");
-        return;
       }
     }
 
     document.addEventListener("keydown", onKeydown, true);
     window.addEventListener("keydown", onKeydown, true);
 
-    // Draggable panel: drag the title area
     enableDrag(headerTitle);
     enableDrag(headerSub);
 
-    // Apply saved position if any
     applyPositionFromState();
 
-    // Add to DOM and render
     document.body.appendChild(container);
     pushConvo("system", `${UI_TITLE} UI ready. Logs persist across pages until you press Clear.`, "info");
     renderLog();
@@ -1188,11 +1173,30 @@
   }
 
   // ===========================================================================
+  // Safe auto-boot
+  // ===========================================================================
+  async function safeBoot() {
+    if (!isExtensionAlive()) return;
+
+    try {
+      const mod = await import(chrome.runtime.getURL("lib/actions.js"));
+      if (!isExtensionAlive()) return;
+      mod.initAutoResume?.();
+    } catch (e) {
+      console.error("Convox bootstrap failed:", e);
+    }
+  }
+
+  // ===========================================================================
   // Boot
   // ===========================================================================
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", ensureTestUI, { once: true });
+    document.addEventListener("DOMContentLoaded", () => {
+      ensureTestUI();
+      safeBoot();
+    }, { once: true });
   } else {
     ensureTestUI();
+    safeBoot();
   }
 })();
