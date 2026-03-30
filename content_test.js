@@ -170,6 +170,7 @@
         }
       } else {
         pushConvo("system", `Import failed: ${msg}`, "error");
+        pushConvo("system", `Import URL: ${url}`, "debug");
       }
 
       throw err;
@@ -216,6 +217,37 @@
         window.speechSynthesis.cancel();
         window.speechSynthesis.speak(u);
       } catch {}
+    }
+  }
+
+  let actionsBooted = false;
+  let announcementBootRetryTimer = null;
+  async function bootActionsRuntime() {
+    if (actionsBooted) return;
+    actionsBooted = true;
+    try {
+      const { initAutoResume, resumePendingAnnouncementRead } = await safeImportActions();
+      initAutoResume?.();
+
+      try {
+        await resumePendingAnnouncementRead?.();
+      } catch {}
+
+      clearInterval(announcementBootRetryTimer);
+      let attempts = 0;
+      announcementBootRetryTimer = setInterval(async () => {
+        attempts += 1;
+        try {
+          await resumePendingAnnouncementRead?.();
+        } catch {}
+        if (attempts >= 8) {
+          clearInterval(announcementBootRetryTimer);
+          announcementBootRetryTimer = null;
+        }
+      }, 700);
+    } catch (e) {
+      actionsBooted = false;
+      console.warn("[Convox Test] Failed to boot actions runtime:", e);
     }
   }
 
@@ -1167,6 +1199,7 @@
     applyPositionFromState();
 
     document.body.appendChild(container);
+    bootActionsRuntime().catch(() => {});
     pushConvo("system", `${UI_TITLE} UI ready. Logs persist across pages until you press Clear.`, "info");
     renderLog();
     focusInput();
