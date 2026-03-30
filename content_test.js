@@ -1206,30 +1206,17 @@
   }
 
   // ===========================================================================
-  // Safe auto-boot
-  // ===========================================================================
-  async function safeBoot() {
-    if (!isExtensionAlive()) return;
-
-    try {
-      const mod = await import(chrome.runtime.getURL("lib/actions.js"));
-      if (!isExtensionAlive()) return;
-      mod.initAutoResume?.();
-    } catch (e) {
-      console.error("Convox bootstrap failed:", e);
-    }
-  }
-
-  // ===========================================================================
   // Boot
   // ===========================================================================
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => {
-      ensureTestUI();
-      safeBoot();
-    }, { once: true });
+    document.addEventListener(
+      "DOMContentLoaded",
+      () => {
+        ensureTestUI();
+      },
+      { once: true }
+    );
   } else {
     ensureTestUI();
-    safeBoot();
   }
 })();
