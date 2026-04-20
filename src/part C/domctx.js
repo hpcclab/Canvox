@@ -43,7 +43,7 @@ function extractBestText(doc, selectors = [], fallbackNodes = []) {
 	for (const sel of selectors) {
 		try {
 			doc.querySelectorAll(sel).forEach((n) => candidates.push(n));
-		} catch (_) { }
+		} catch (_) {}
 	}
 
 	for (const n of fallbackNodes) if (n) candidates.push(n);

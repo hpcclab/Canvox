@@ -23,7 +23,61 @@ let _summarizerSessionKey = "";
 // A tiny English stopword list for the heuristic fallback.
 // (We keep it small for performance and to avoid shipping large lists.)
 const STOPWORDS = new Set([
-	"a", "an", "and", "are", "as", "at", "be", "but", "by", "for", "from", "has", "have", "he", "her", "his", "i", "if", "in", "into", "is", "it", "its", "me", "my", "not", "of", "on", "or", "our", "she", "so", "that", "the", "their", "them", "then", "there", "these", "they", "this", "to", "us", "was", "we", "were", "what", "when", "where", "which", "who", "will", "with", "you", "your",
+	"a",
+	"an",
+	"and",
+	"are",
+	"as",
+	"at",
+	"be",
+	"but",
+	"by",
+	"for",
+	"from",
+	"has",
+	"have",
+	"he",
+	"her",
+	"his",
+	"i",
+	"if",
+	"in",
+	"into",
+	"is",
+	"it",
+	"its",
+	"me",
+	"my",
+	"not",
+	"of",
+	"on",
+	"or",
+	"our",
+	"she",
+	"so",
+	"that",
+	"the",
+	"their",
+	"them",
+	"then",
+	"there",
+	"these",
+	"they",
+	"this",
+	"to",
+	"us",
+	"was",
+	"we",
+	"were",
+	"what",
+	"when",
+	"where",
+	"which",
+	"who",
+	"will",
+	"with",
+	"you",
+	"your",
 ]);
 
 function clamp(n, lo, hi) {
@@ -147,9 +201,7 @@ function heuristicExtractiveSummary(text, maxSentences = 2) {
 	});
 
 	scored.sort((a, b) => b.score - a.score);
-	const top = scored
-		.slice(0, clamp(maxSentences, 1, 5))
-		.sort((a, b) => a.idx - b.idx);
+	const top = scored.slice(0, clamp(maxSentences, 1, 5)).sort((a, b) => a.idx - b.idx);
 	return top.map((x) => x.s).join(" ");
 }
 
@@ -176,8 +228,8 @@ async function getSummarizerSession(options) {
 			...options,
 			monitor(m) {
 				try {
-					m.addEventListener("downloadprogress", () => { });
-				} catch { }
+					m.addEventListener("downloadprogress", () => {});
+				} catch {}
 			},
 		});
 		_summarizerSessionKey = key;

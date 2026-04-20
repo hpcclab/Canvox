@@ -191,7 +191,7 @@ export async function submitAssignmentCommand(recognitionState) {
 	// We keep this small and defensive to avoid unexpected clicks.
 	try {
 		const btn = document.querySelector(
-			"button[type='submit'], button#submit_assignment_button, button.Button--primary, input[type='submit']"
+			"button[type='submit'], button#submit_assignment_button, button.Button--primary, input[type='submit']",
 		);
 		if (!btn) {
 			textToSpeech("I can't find a submit button on this page yet.", recognitionState);
