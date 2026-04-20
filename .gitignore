@@ -1,0 +1,8 @@
+# Ignore actual API keys file but keep the template
+config/keys.js
+*.env
+
+# Common files to ignore
+node_modules/
+.DS_Store
+*.log
