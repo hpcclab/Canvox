@@ -14,21 +14,21 @@ Canvox is a **Chrome extension for Canvas** that allows users to interact with C
 
 For example, a user may say or type:
 
-* "Open my assignments"
-* "Show my grades"
-* "Read this page"
-* "What is due?"
-* "Open my inbox"
+- "Open my assignments"
+- "Show my grades"
+- "Read this page"
+- "What is due?"
+- "Open my inbox"
 
 Canvox figures out what the user wants and then performs the requested action on Canvas.
 
 The project is mainly focused on making Canvas easier to use through:
 
-* Voice commands
-* Spoken feedback
-* Page reading
-* Easier navigation
-* Accessibility support
+- Voice commands
+- Spoken feedback
+- Page reading
+- Easier navigation
+- Accessibility support
 
 One important goal of Canvox is helping blind and visually impaired Canvas users, although the voice interface can also be useful for anyone who prefers hands-free interaction.
 
@@ -90,9 +90,9 @@ This file creates the current testing interface that appears on the webpage.
 
 It can accept:
 
-* Typed commands
-* Microphone input
-* Keyboard shortcuts
+- Typed commands
+- Microphone input
+- Keyboard shortcuts
 
 ---
 
@@ -125,12 +125,12 @@ could be recognized as an action related to opening assignments.
 
 Different intents represent actions such as:
 
-* Opening Canvas pages
-* Reading a page
-* Checking due dates
-* Opening the inbox
-* Creating messages
-* Getting help
+- Opening Canvas pages
+- Reading a page
+- Checking due dates
+- Opening the inbox
+- Creating messages
+- Getting help
 
 The current intent system mainly uses rules and pattern matching.
 
@@ -148,12 +148,12 @@ This file contains much of the project's command behavior.
 
 Depending on the command, Canvox may:
 
-* Open another Canvas page
-* Click a button
-* Read information from the webpage
-* Get assignment or to-do information
-* Start a guided command
-* Speak information back to the user
+- Open another Canvas page
+- Click a button
+- Read information from the webpage
+- Get assignment or to-do information
+- Start a guided command
+- Speak information back to the user
 
 `lib/actions.js` is one of the most important files in the project.
 
@@ -163,10 +163,10 @@ Depending on the command, Canvox may:
 
 After performing an action, Canvox may respond through:
 
-* Spoken audio
-* Browser navigation
-* Clicking something on Canvas
-* Text shown in the testing interface
+- Spoken audio
+- Browser navigation
+- Clicking something on Canvas
+- Text shown in the testing interface
 
 For example, if the user asks Canvox to open assignments, Canvox may navigate directly to the assignments page.
 
@@ -199,10 +199,10 @@ This is the main project introduction.
 
 It explains things such as:
 
-* What Canvox is
-* The project's goals
-* Basic features
-* How to load the extension in Chrome
+- What Canvox is
+- The project's goals
+- Basic features
+- How to load the extension in Chrome
 
 ---
 
@@ -218,10 +218,10 @@ manifest.json
 
 It tells Chrome things such as:
 
-* Which files should run
-* What permissions Canvox needs
-* Which background code should run
-* Which scripts should be added to webpages
+- Which files should run
+- What permissions Canvox needs
+- Which background code should run
+- Which scripts should be added to webpages
 
 The current manifest loads:
 
@@ -239,11 +239,11 @@ This is currently the main connection between the user and the Canvox command sy
 
 It creates the testing interface and handles things such as:
 
-* Typed commands
-* Microphone commands
-* Command transcripts
-* Keyboard shortcuts
-* Sending commands into the Canvox action system
+- Typed commands
+- Microphone commands
+- Command transcripts
+- Keyboard shortcuts
+- Sending commands into the Canvox action system
 
 ---
 
@@ -296,10 +296,10 @@ This file runs behind the scenes as part of the Chrome extension.
 
 It helps with things such as:
 
-* Initial settings
-* Extension messages
-* Navigation-related tasks
-* Opening extension options
+- Initial settings
+- Extension messages
+- Navigation-related tasks
+- Opening extension options
 
 ---
 
@@ -313,12 +313,12 @@ src/
 
 It contains code related to:
 
-* Controllers
-* Speech
-* Settings
-* Reading tools
-* Navigation
-* Other earlier Canvox features
+- Controllers
+- Speech
+- Settings
+- Reading tools
+- Navigation
+- Other earlier Canvox features
 
 Some of this appears to belong to an older version of the project.
 
@@ -352,18 +352,18 @@ Contains icons and other image assets used by the extension.
 
 The current repository contains support for features such as:
 
-* Typed commands
-* Voice commands
-* Canvas navigation
-* Assignment-related commands
-* Grade navigation
-* Inbox commands
-* Page reading
-* Page summaries
-* Due-date queries
-* Canvas planner and to-do information
-* Spoken responses
-* Chained commands
+- Typed commands
+- Voice commands
+- Canvas navigation
+- Assignment-related commands
+- Grade navigation
+- Inbox commands
+- Page reading
+- Page summaries
+- Due-date queries
+- Canvas planner and to-do information
+- Spoken responses
+- Chained commands
 
 A chained command means that Canvox can handle multiple related actions from a longer request.
 
@@ -451,12 +451,12 @@ git diff
 
 Before committing:
 
-* Make sure you understand every file you changed.
-* Make sure the extension still loads.
-* Test the feature you worked on.
-* Check for obvious errors.
-* Do not commit passwords, API keys, tokens, or other private information.
-* Avoid changing unrelated files.
+- Make sure you understand every file you changed.
+- Make sure the extension still loads.
+- Test the feature you worked on.
+- Check for obvious errors.
+- Do not commit passwords, API keys, tokens, or other private information.
+- Avoid changing unrelated files.
 
 Keep changes small and focused whenever possible.
 
