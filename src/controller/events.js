@@ -1,7 +1,8 @@
 import { runAnnouncements } from "../model/newContent.js";
 import { initRecognition } from "../model/recognition.js";
 import { DEFAULT_SETTINGS, getSettingWithDefault, isHotkeyMatch, toggleMicrophone } from "../model/settings.js";
-import { giveNavigationFeedback } from "../model/tts.js";
+import { giveNavigationFeedback, textToSpeech } from "../model/tts.js";
+import { t } from "../../lib/i18n.js";
 import { assignMessages } from "./inbox.js";
 import { stopAudio, toggleTranscript } from "./injectElements.js";
 import { routeActions } from "./router.js";
@@ -109,14 +110,18 @@ function setupListeners(recognitionState) {
 				// Play mic_on.mp3 when activating microphone
 				playAudioFeedback("mic_on.mp3");
 
+				// initRecognition is async: it must finish before start()
 				if (!recognitionState.recognition) {
 					const deviceId = await getSettingWithDefault("audioInput", DEFAULT_SETTINGS.audioInput);
-					initRecognition(recognitionState, deviceId);
+					await initRecognition(recognitionState, deviceId);
+				}
+				if (!recognitionState.recognition) return; // init failed
+
+				try {
 					recognitionState.recognition.start();
 					recognitionState.isRecognizing = true;
-				} else {
-					recognitionState.recognition.start();
-					recognitionState.isRecognizing = true;
+				} catch (e) {
+					console.error("Could not start microphone:", e); // start() throws if already started
 				}
 			} else if (changes.microphoneActive.newValue === false && recognitionState.isRecognizing) {
 				// Play mic_off.mp3 when deactivating microphone
@@ -148,9 +153,10 @@ function setupListeners(recognitionState) {
 	});
 
 	// This is for users who may not want to use the microphone or have accessibility needs
-	document.querySelector(".voice-input").addEventListener("keydown", async (e) => {
+	const voiceInput = document.querySelector(".voice-input");
+	voiceInput?.addEventListener("keydown", async (e) => {
 		if (e.key === "Enter") {
-			await routeActions(e.target.value);
+			await routeActions(e.target.value, recognitionState); // pass state so Part C audio works
 			e.target.value = ""; // Clear the input after processing
 		}
 	});
