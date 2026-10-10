@@ -5,11 +5,31 @@ import { DEFAULT_SETTINGS } from "./src/model/settings.js";
 // Convox MV3 Service Worker / Background
 // =============================================================================
 
+// Spanish support: Convox's language lives in chrome.storage.sync next to the
+// other settings. Default is English, so existing users see no change.
+// (Kept here instead of src/model/settings.js so that file's import chain is
+// not made any heavier for the service worker.)
+const LANG_STORAGE_KEY = "canvoxLang";
+const DEFAULT_LANG = "en";
+
+function ensureDefaultLanguage() {
+	chrome.storage.sync.get(LANG_STORAGE_KEY, (data) => {
+		if (chrome.runtime.lastError) return;
+		if (!data?.[LANG_STORAGE_KEY]) {
+			chrome.storage.sync.set({ [LANG_STORAGE_KEY]: DEFAULT_LANG });
+		}
+	});
+}
+
 chrome.runtime.onInstalled.addListener(({ reason }) => {
 	if (reason === "install") {
 		chrome.storage.sync.set(DEFAULT_SETTINGS, () => {
 			console.log("Default settings initialized");
 		});
+	}
+	// On install AND update: add the language default without touching anything else.
+	if (reason === "install" || reason === "update") {
+		ensureDefaultLanguage();
 	}
 });
 

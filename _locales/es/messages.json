@@ -1,0 +1,377 @@
+{
+	"extName": {
+		"message": "Convox"
+	},
+	"extDescription": {
+		"message": "Asistente accesible de navegación por voz y lectura"
+	},
+	"ui_subtitle": {
+		"message": "Atajos: $KEY$ ayuda • Arrastra el título para mover",
+		"placeholders": {
+			"key": {
+				"content": "$1"
+			}
+		}
+	},
+	"panel_aria": {
+		"message": "Panel flotante de $TITLE$",
+		"placeholders": {
+			"title": {
+				"content": "$1"
+			}
+		}
+	},
+	"btn_help": {
+		"message": "❓ Ayuda"
+	},
+	"btn_minimize": {
+		"message": "➖ Min"
+	},
+	"btn_show": {
+		"message": "➕ Mostrar"
+	},
+	"btn_hide_log": {
+		"message": "📜 Ocultar registro"
+	},
+	"btn_show_log": {
+		"message": "📜 Mostrar registro"
+	},
+	"btn_hide_controls": {
+		"message": "🎛️ Ocultar controles"
+	},
+	"btn_show_controls": {
+		"message": "🎛️ Mostrar controles"
+	},
+	"btn_copy": {
+		"message": "📋 Copiar"
+	},
+	"btn_clear": {
+		"message": "🧹 Borrar"
+	},
+	"btn_diagnose": {
+		"message": "🩺 Diagnóstico"
+	},
+	"btn_listen": {
+		"message": "🎤 Escuchar"
+	},
+	"btn_stop": {
+		"message": "🛑 Detener"
+	},
+	"btn_stop_speaking": {
+		"message": "🛑 Dejar de hablar"
+	},
+	"btn_submit": {
+		"message": "✅ Enviar"
+	},
+	"btn_language": {
+		"message": "🌐 English"
+	},
+	"btn_language_aria": {
+		"message": "Cambiar el idioma a inglés"
+	},
+	"input_placeholder": {
+		"message": "Escribe un comando o usa el micrófono 🎤"
+	},
+	"input_aria": {
+		"message": "Entrada de comandos"
+	},
+	"search_placeholder": {
+		"message": "Buscar en el registro (p. ej., error, abrir curso)…"
+	},
+	"search_aria": {
+		"message": "Buscar en el registro"
+	},
+	"log_aria": {
+		"message": "Transcripción de la conversación"
+	},
+	"log_empty": {
+		"message": "Aún no hay registros."
+	},
+	"log_no_matches": {
+		"message": "Sin coincidencias."
+	},
+	"hint_examples": {
+		"message": "Consejo: di \"qué vence hoy\" / \"qué vence esta semana\" / \"abre el curso 4901\". Pulsa Escape para detener."
+	},
+	"role_you": {
+		"message": "TÚ"
+	},
+	"role_convox": {
+		"message": "CONVOX"
+	},
+	"role_system": {
+		"message": "SISTEMA"
+	},
+	"speaker_you": {
+		"message": "Tú"
+	},
+	"speaker_convox": {
+		"message": "Convox"
+	},
+	"speaker_system": {
+		"message": "Sistema"
+	},
+	"msg_listening": {
+		"message": "Escuchando…"
+	},
+	"msg_stopped_listening": {
+		"message": "Dejé de escuchar."
+	},
+	"msg_stopped_speaking": {
+		"message": "Dejé de hablar."
+	},
+	"msg_copied": {
+		"message": "Conversación copiada al portapapeles."
+	},
+	"msg_cleared": {
+		"message": "Conversación borrada."
+	},
+	"msg_ui_ready": {
+		"message": "Interfaz de $TITLE$ lista. El registro se conserva entre páginas hasta que pulses Borrar.",
+		"placeholders": {
+			"title": {
+				"content": "$1"
+			}
+		}
+	},
+	"msg_error_spoken": {
+		"message": "Lo siento, ocurrió un error. Revisa la consola para más detalles."
+	},
+	"msg_no_speech_rec": {
+		"message": "El reconocimiento de voz no es compatible con este navegador."
+	},
+	"msg_help_prefix": {
+		"message": "Ayuda: "
+	},
+	"msg_help": {
+		"message": "Atajos de $TITLE$: $P$+L escuchar o detener. $P$+S enviar. $P$+X dejar de hablar. $P$+C copiar. $P$+R borrar. $P$+H ayuda. $P$+M minimizar o mostrar. $P$+D diagnóstico. $P$+F ir a la entrada de comandos. $P$+G mostrar u ocultar líneas de depuración. $P$+E ver solo errores. $P$+V registro detallado en la consola. Pulsa Escape para dejar de escuchar o de hablar.",
+		"placeholders": {
+			"title": {
+				"content": "$1"
+			},
+			"p": {
+				"content": "$2"
+			}
+		}
+	},
+	"msg_lang_switched": {
+		"message": "Idioma: español."
+	},
+	"msg_lang_downloading": {
+		"message": "Descargando el paquete de español ($PCT$%)…",
+		"placeholders": {
+			"pct": {
+				"content": "$1"
+			}
+		}
+	},
+	"msg_lang_ready": {
+		"message": "Paquete de español listo. Ahora funciona sin conexión."
+	},
+	"msg_lang_missing": {
+		"message": "La traducción al español aún no está lista. Pulsa el botón de idioma una vez con conexión para descargarla."
+	},
+	"msg_reload_for_labels": {
+		"message": "Recarga la página para actualizar todas las etiquetas."
+	},
+	"msg_voice_local": {
+		"message": "El reconocimiento de voz funciona en este equipo."
+	},
+	"msg_voice_cloud": {
+		"message": "En este equipo, la entrada de voz usa el servicio de voz en línea de Google. Los comandos escritos funcionan sin conexión."
+	},
+	"opt_page_title": {
+		"message": "Configuración de Convox"
+	},
+	"opt_login_heading": {
+		"message": "Convox – Configuración de inicio de sesión"
+	},
+	"opt_username_label": {
+		"message": "Usuario / EUID"
+	},
+	"opt_password_label": {
+		"message": "Contraseña"
+	},
+	"opt_username_placeholder": {
+		"message": "p. ej. abc1234"
+	},
+	"opt_password_placeholder": {
+		"message": "Tu contraseña de Canvas"
+	},
+	"opt_save_btn": {
+		"message": "Guardar"
+	},
+	"opt_clear_btn": {
+		"message": "Borrar"
+	},
+	"opt_lang_heading": {
+		"message": "Idioma"
+	},
+	"opt_lang_label": {
+		"message": "Idioma de Convox"
+	},
+	"opt_lang_en": {
+		"message": "English (inglés)"
+	},
+	"opt_lang_es": {
+		"message": "Español"
+	},
+	"opt_translate_content": {
+		"message": "Leer en español el contenido de Canvas (anuncios, mensajes, páginas)"
+	},
+	"opt_download_btn": {
+		"message": "Descargar el paquete de español"
+	},
+	"opt_download_progress": {
+		"message": "Descargando… $PCT$%",
+		"placeholders": {
+			"pct": {
+				"content": "$1"
+			}
+		}
+	},
+	"opt_pack_available": {
+		"message": "Traducción al español: instalada. Funciona sin conexión."
+	},
+	"opt_pack_downloadable": {
+		"message": "Traducción al español: aún no descargada."
+	},
+	"opt_pack_downloading": {
+		"message": "Traducción al español: descargando…"
+	},
+	"opt_pack_unsupported": {
+		"message": "Esta versión de Chrome no admite la traducción al español."
+	},
+	"opt_pack_unavailable": {
+		"message": "La traducción al español no está disponible en este equipo."
+	},
+	"opt_voice_local": {
+		"message": "Entrada de voz en español: en este equipo (sin conexión)."
+	},
+	"opt_voice_cloud": {
+		"message": "Entrada de voz en español: usa el servicio en línea de Google. Escribir funciona sin conexión."
+	},
+	"opt_instructions": {
+		"message": "Bienvenido a la configuración de inicio de sesión de Convox. Estos son tus comandos de voz. Di: usuario, y luego tu usuario o EUID. Di: contraseña, y luego tu contraseña. Di: guardar, para guardar tus credenciales. Di: borrar, para eliminar las credenciales guardadas. Di: qué guardaste, para confirmar lo guardado. Di: repetir, para escuchar estas instrucciones otra vez."
+	},
+	"opt_username_set": {
+		"message": "Usuario establecido: $VALUE$. Di contraseña y luego tu contraseña, o di guardar si terminaste.",
+		"placeholders": {
+			"value": {
+				"content": "$1"
+			}
+		}
+	},
+	"opt_status_username_saved": {
+		"message": "Usuario guardado."
+	},
+	"opt_password_set": {
+		"message": "Contraseña establecida. Di guardar para confirmar, o di usuario si aún no lo has dicho."
+	},
+	"opt_status_password_saved": {
+		"message": "Contraseña guardada."
+	},
+	"opt_nothing_to_save": {
+		"message": "Aún no hay nada que guardar. Di usuario y luego tu usuario, y contraseña y luego tu contraseña."
+	},
+	"opt_status_saved": {
+		"message": "Credenciales guardadas."
+	},
+	"opt_saved_voice": {
+		"message": "Guardado. Usuario: $USER$. Contraseña: $PW$. Ya puedes cerrar esta página y decir iniciar sesión en la página de inicio de sesión de Canvas.",
+		"placeholders": {
+			"user": {
+				"content": "$1"
+			},
+			"pw": {
+				"content": "$2"
+			}
+		}
+	},
+	"opt_saved_short": {
+		"message": "Guardado. Usuario: $USER$. Contraseña: $PW$.",
+		"placeholders": {
+			"user": {
+				"content": "$1"
+			},
+			"pw": {
+				"content": "$2"
+			}
+		}
+	},
+	"opt_cleared_voice": {
+		"message": "Credenciales borradas. Di usuario para empezar de nuevo."
+	},
+	"opt_status_cleared": {
+		"message": "Credenciales borradas."
+	},
+	"opt_review_user": {
+		"message": "Usuario: $USER$.",
+		"placeholders": {
+			"user": {
+				"content": "$1"
+			}
+		}
+	},
+	"opt_review_no_user": {
+		"message": "No hay usuario guardado."
+	},
+	"opt_review_pw": {
+		"message": "La contraseña está guardada."
+	},
+	"opt_review_no_pw": {
+		"message": "No hay contraseña guardada."
+	},
+	"opt_unrecognized": {
+		"message": "No te entendí. Di repetir para escuchar los comandos disponibles."
+	},
+	"opt_sr_unsupported": {
+		"message": "El reconocimiento de voz no es compatible."
+	},
+	"opt_listening": {
+		"message": "Escuchando…"
+	},
+	"opt_speaking": {
+		"message": "Hablando…"
+	},
+	"opt_status_enter": {
+		"message": "Escribe un usuario o una contraseña."
+	},
+	"opt_prompt_username": {
+		"message": "No se encontraron credenciales guardadas. Escribe o di ahora tu usuario o EUID."
+	},
+	"opt_prompt_password": {
+		"message": "Entendido. Ahora escribe o di tu contraseña."
+	},
+	"opt_setup_complete": {
+		"message": "Configuración completa. Usuario: $USER$. Contraseña: $PW$. Puedes cerrar esta página y decir iniciar sesión otra vez.",
+		"placeholders": {
+			"user": {
+				"content": "$1"
+			},
+			"pw": {
+				"content": "$2"
+			}
+		}
+	},
+	"opt_field_retry": {
+		"message": "No te entendí. Di tu $FIELD$, por favor.",
+		"placeholders": {
+			"field": {
+				"content": "$1"
+			}
+		}
+	},
+	"opt_field_username": {
+		"message": "usuario"
+	},
+	"opt_field_password": {
+		"message": "contraseña"
+	},
+	"opt_set": {
+		"message": "establecida"
+	},
+	"opt_not_set": {
+		"message": "no establecida"
+	}
+}
