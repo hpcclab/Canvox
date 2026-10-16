@@ -1,7 +1,7 @@
 import { routeActions } from "../controller/router.js";
 
 // start speech recognition with appropriate audio device
-function initRecognition(recognitionState, deviceId = null) {
+async function initRecognition(recognitionState, deviceId = null) {
 	const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
 	// If there's an existing recognition object and it's active, stop it
@@ -14,7 +14,7 @@ function initRecognition(recognitionState, deviceId = null) {
 	const newRecognition = new SpeechRecognition();
 	newRecognition.continuous = true;
 	newRecognition.interimResults = true;
-	newRecognition.lang = "en-US";
+	newRecognition.lang = selectedLang;
 	recognitionState.recognition = newRecognition;
 
 	// If a specific device ID is provided and it's not the default

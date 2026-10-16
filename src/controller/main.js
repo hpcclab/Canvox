@@ -33,11 +33,15 @@ export async function main() {
 		getSettingWithDefault("microphoneActive", DEFAULT_SETTINGS.microphoneActive),
 		getSettingWithDefault("audioInput", DEFAULT_SETTINGS.audioInput),
 	]);
-	initRecognition(recognitionState, deviceId);
+	await initRecognition(recognitionState, deviceId);
 
 	// Start recognition if it was previously active
-	if (isActive && !recognitionState.isRecognizing) {
-		recognitionState.recognition.start();
-		recognitionState.isRecognizing = true;
+	if (isActive && recognitionState.recognition && !recognitionState.isRecognizing) {
+		try {
+			recognitionState.recognition.start();
+			recognitionState.isRecognizing = true;
+		} catch (e) {
+			console.error("Could not restore microphone state:", e);
+		}
 	}
 }

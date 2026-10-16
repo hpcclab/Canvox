@@ -1,0 +1,377 @@
+{
+	"extName": {
+		"message": "Convox"
+	},
+	"extDescription": {
+		"message": "Accessible voice navigation and reading assistant"
+	},
+	"ui_subtitle": {
+		"message": "Shortcuts: $KEY$ help • Drag title to move",
+		"placeholders": {
+			"key": {
+				"content": "$1"
+			}
+		}
+	},
+	"panel_aria": {
+		"message": "$TITLE$ floating panel",
+		"placeholders": {
+			"title": {
+				"content": "$1"
+			}
+		}
+	},
+	"btn_help": {
+		"message": "❓ Help"
+	},
+	"btn_minimize": {
+		"message": "➖ Min"
+	},
+	"btn_show": {
+		"message": "➕ Show"
+	},
+	"btn_hide_log": {
+		"message": "📜 Hide Log"
+	},
+	"btn_show_log": {
+		"message": "📜 Show Log"
+	},
+	"btn_hide_controls": {
+		"message": "🎛️ Hide Controls"
+	},
+	"btn_show_controls": {
+		"message": "🎛️ Show Controls"
+	},
+	"btn_copy": {
+		"message": "📋 Copy"
+	},
+	"btn_clear": {
+		"message": "🧹 Clear"
+	},
+	"btn_diagnose": {
+		"message": "🩺 Diagnose"
+	},
+	"btn_listen": {
+		"message": "🎤 Listen"
+	},
+	"btn_stop": {
+		"message": "🛑 Stop"
+	},
+	"btn_stop_speaking": {
+		"message": "🛑 Stop Speaking"
+	},
+	"btn_submit": {
+		"message": "✅ Submit"
+	},
+	"btn_language": {
+		"message": "🌐 Español"
+	},
+	"btn_language_aria": {
+		"message": "Switch language to Spanish"
+	},
+	"input_placeholder": {
+		"message": "Type a command or use mic 🎤"
+	},
+	"input_aria": {
+		"message": "Command input"
+	},
+	"search_placeholder": {
+		"message": "Search logs (e.g., error, open course, conf 0.9)…"
+	},
+	"search_aria": {
+		"message": "Search logs"
+	},
+	"log_aria": {
+		"message": "Conversation transcript"
+	},
+	"log_empty": {
+		"message": "No logs yet."
+	},
+	"log_no_matches": {
+		"message": "No matches."
+	},
+	"hint_examples": {
+		"message": "Tip: Say \"due today\" / \"due this week\" / \"open course 4901\". Press Escape to stop."
+	},
+	"role_you": {
+		"message": "YOU"
+	},
+	"role_convox": {
+		"message": "CONVOX"
+	},
+	"role_system": {
+		"message": "SYSTEM"
+	},
+	"speaker_you": {
+		"message": "You"
+	},
+	"speaker_convox": {
+		"message": "Convox"
+	},
+	"speaker_system": {
+		"message": "System"
+	},
+	"msg_listening": {
+		"message": "Listening…"
+	},
+	"msg_stopped_listening": {
+		"message": "Stopped listening."
+	},
+	"msg_stopped_speaking": {
+		"message": "Stopped speaking."
+	},
+	"msg_copied": {
+		"message": "Conversation copied to clipboard."
+	},
+	"msg_cleared": {
+		"message": "Conversation cleared."
+	},
+	"msg_ui_ready": {
+		"message": "$TITLE$ UI ready. Logs persist across pages until you press Clear.",
+		"placeholders": {
+			"title": {
+				"content": "$1"
+			}
+		}
+	},
+	"msg_error_spoken": {
+		"message": "Sorry — I hit an error. Check the console for details."
+	},
+	"msg_no_speech_rec": {
+		"message": "SpeechRecognition not supported in this browser."
+	},
+	"msg_help_prefix": {
+		"message": "Help: "
+	},
+	"msg_help": {
+		"message": "$TITLE$ shortcuts: $P$+L listen/stop. $P$+S submit. $P$+X stop speaking. $P$+C copy. $P$+R clear. $P$+H help. $P$+M minimize/show. $P$+D diagnose. $P$+F focus input. $P$+G toggle debug lines. $P$+E errors-only view. $P$+V verbose console logging. Press Escape to stop listening/speaking.",
+		"placeholders": {
+			"title": {
+				"content": "$1"
+			},
+			"p": {
+				"content": "$2"
+			}
+		}
+	},
+	"msg_lang_switched": {
+		"message": "Language: English."
+	},
+	"msg_lang_downloading": {
+		"message": "Downloading the Spanish language pack ($PCT$%)…",
+		"placeholders": {
+			"pct": {
+				"content": "$1"
+			}
+		}
+	},
+	"msg_lang_ready": {
+		"message": "Spanish language pack ready. It now works offline."
+	},
+	"msg_lang_missing": {
+		"message": "Spanish translation isn't ready yet. Press the language button once while online to download it."
+	},
+	"msg_reload_for_labels": {
+		"message": "Reload the page to update all labels."
+	},
+	"msg_voice_local": {
+		"message": "Voice input runs on this computer."
+	},
+	"msg_voice_cloud": {
+		"message": "Voice input on this computer uses Google's online speech service. Typed commands work offline."
+	},
+	"opt_page_title": {
+		"message": "Convox Settings"
+	},
+	"opt_login_heading": {
+		"message": "Convox – Login Setup"
+	},
+	"opt_username_label": {
+		"message": "Username / EUID"
+	},
+	"opt_password_label": {
+		"message": "Password"
+	},
+	"opt_username_placeholder": {
+		"message": "e.g. abc1234"
+	},
+	"opt_password_placeholder": {
+		"message": "Your Canvas password"
+	},
+	"opt_save_btn": {
+		"message": "Save"
+	},
+	"opt_clear_btn": {
+		"message": "Clear"
+	},
+	"opt_lang_heading": {
+		"message": "Language"
+	},
+	"opt_lang_label": {
+		"message": "Convox language"
+	},
+	"opt_lang_en": {
+		"message": "English"
+	},
+	"opt_lang_es": {
+		"message": "Español (Spanish)"
+	},
+	"opt_translate_content": {
+		"message": "Read Canvas page content (announcements, messages, pages) in Spanish"
+	},
+	"opt_download_btn": {
+		"message": "Download Spanish language pack"
+	},
+	"opt_download_progress": {
+		"message": "Downloading… $PCT$%",
+		"placeholders": {
+			"pct": {
+				"content": "$1"
+			}
+		}
+	},
+	"opt_pack_available": {
+		"message": "Spanish translation: installed. Works offline."
+	},
+	"opt_pack_downloadable": {
+		"message": "Spanish translation: not downloaded yet."
+	},
+	"opt_pack_downloading": {
+		"message": "Spanish translation: downloading…"
+	},
+	"opt_pack_unsupported": {
+		"message": "Spanish translation isn't supported in this version of Chrome."
+	},
+	"opt_pack_unavailable": {
+		"message": "Spanish translation isn't available on this computer."
+	},
+	"opt_voice_local": {
+		"message": "Spanish voice input: on this computer (offline)."
+	},
+	"opt_voice_cloud": {
+		"message": "Spanish voice input: uses Google's online speech service. Typing works offline."
+	},
+	"opt_instructions": {
+		"message": "Welcome to Convox login setup. Here are your voice commands. Say: set username, then your username or EUID. Say: set password, then your password. Say: save, to store your credentials. Say: clear, to delete saved credentials. Say: what did you save, to confirm what is stored. Say: repeat, to hear these instructions again."
+	},
+	"opt_username_set": {
+		"message": "Username set to $VALUE$. Say set password, then your password, or say save if you're done.",
+		"placeholders": {
+			"value": {
+				"content": "$1"
+			}
+		}
+	},
+	"opt_status_username_saved": {
+		"message": "Username saved."
+	},
+	"opt_password_set": {
+		"message": "Password set. Say save to confirm, or set username if you haven't done that yet."
+	},
+	"opt_status_password_saved": {
+		"message": "Password saved."
+	},
+	"opt_nothing_to_save": {
+		"message": "Nothing to save yet. Say set username, then your username, and set password, then your password."
+	},
+	"opt_status_saved": {
+		"message": "Credentials saved."
+	},
+	"opt_saved_voice": {
+		"message": "Saved. Username is $USER$. Password is $PW$. You can now close this page and say log in on the Canvas login page.",
+		"placeholders": {
+			"user": {
+				"content": "$1"
+			},
+			"pw": {
+				"content": "$2"
+			}
+		}
+	},
+	"opt_saved_short": {
+		"message": "Saved. Username is $USER$. Password is $PW$.",
+		"placeholders": {
+			"user": {
+				"content": "$1"
+			},
+			"pw": {
+				"content": "$2"
+			}
+		}
+	},
+	"opt_cleared_voice": {
+		"message": "Credentials cleared. Say set username to start over."
+	},
+	"opt_status_cleared": {
+		"message": "Credentials cleared."
+	},
+	"opt_review_user": {
+		"message": "Username is $USER$.",
+		"placeholders": {
+			"user": {
+				"content": "$1"
+			}
+		}
+	},
+	"opt_review_no_user": {
+		"message": "No username saved."
+	},
+	"opt_review_pw": {
+		"message": "Password is set."
+	},
+	"opt_review_no_pw": {
+		"message": "No password saved."
+	},
+	"opt_unrecognized": {
+		"message": "I didn't catch that. Say repeat to hear the available commands."
+	},
+	"opt_sr_unsupported": {
+		"message": "Speech recognition not supported."
+	},
+	"opt_listening": {
+		"message": "Listening…"
+	},
+	"opt_speaking": {
+		"message": "Speaking…"
+	},
+	"opt_status_enter": {
+		"message": "Please enter a username or password."
+	},
+	"opt_prompt_username": {
+		"message": "No saved credentials were found. Please type or say your username or EUID now."
+	},
+	"opt_prompt_password": {
+		"message": "Got it. Now type or say your password."
+	},
+	"opt_setup_complete": {
+		"message": "Setup complete. Username is $USER$ and password is $PW$. You can close this page and say log in again.",
+		"placeholders": {
+			"user": {
+				"content": "$1"
+			},
+			"pw": {
+				"content": "$2"
+			}
+		}
+	},
+	"opt_field_retry": {
+		"message": "I didn't catch that. Please say your $FIELD$.",
+		"placeholders": {
+			"field": {
+				"content": "$1"
+			}
+		}
+	},
+	"opt_field_username": {
+		"message": "username"
+	},
+	"opt_field_password": {
+		"message": "password"
+	},
+	"opt_set": {
+		"message": "set"
+	},
+	"opt_not_set": {
+		"message": "not set"
+	}
+}

@@ -1,4 +1,8 @@
 {
+	"type": "module",
+	"scripts": {
+		"test": "node --test tests/translate.test.js"
+	},
 	"devDependencies": {
 		"prettier": "^3.9.6"
 	},

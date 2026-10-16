@@ -60,17 +60,14 @@ async function toggleMicrophone(recognitionState) {
 	} else {
 		if (!recognitionState.recognition) {
 			const deviceId = await getSettingWithDefault("audioInput", DEFAULT_SETTINGS.audioInput);
-			initRecognition(recognitionState, deviceId);
-			recognitionState.recognition.start();
-			recognitionState.isRecognizing = true;
-		} else {
-			recognitionState.recognition.start();
-			recognitionState.isRecognizing = true;
+			await initRecognition(recognitionState, deviceId);
 		}
+		if (!recognitionState.recognition) return; // init failed (e.g. SpeechRecognition unsupported)
+		recognitionState.recognition.start();
+		recognitionState.isRecognizing = true;
 	}
 
-	// Update the storage to keep popup UI in sync. So that when the user presses hotkey, the popup reflects the correct state
-	// of the microphone (active/inactive).
+	// Keep the popup UI in sync with the hotkey state
 	chrome.storage.sync.set({ microphoneActive: recognitionState.isRecognizing });
 }
 
@@ -182,12 +179,14 @@ export const POSSIBLE_EXTENSION_ACTIONS = [
 	"explain options",
 ];
 
-export {
-	getSettingWithDefault,
-	DEFAULT_SETTINGS,
-	toggleMicrophone,
-	adjustVolume,
-	setVolume,
-	isHotkeyMatch,
-	extensionActionRouter,
-};
+  export {
+  	getSettingWithDefault,
+  	DEFAULT_SETTINGS,
+  	toggleMicrophone,
+  	adjustVolume,
+  	setVolume,
+  	isHotkeyMatch,
+  	extensionActionRouter,
+  	getLanguage,
+  	setLanguage,
+  };
