@@ -461,3 +461,37 @@ Before committing:
 Keep changes small and focused whenever possible.
 
 This makes the code easier for everyone on the team to understand, test, and review.
+
+<!-- canvox-spanish-support -->
+
+## Spanish support — team notes
+
+- `lib/intent.js` is intentionally unchanged. To support a new Spanish phrasing,
+  add a line to `PHRASEBOOK` / `GLOSSARY_ES` / `FIXUPS` in `lib/translate.js`
+  and a test in `tests/translate.test.js` — never duplicate intent rules.
+- Do not pass a second argument to `handleUtterance()`: it is the intent detector.
+- Import `lib/i18n.js` / `lib/translate.js` **without** a `?v=` query string, or
+  you get a second copy of the module with its own language state.
+- Language setting: `chrome.storage.sync` key `canvoxLang` ("en" | "es").
+  Page-content setting: `canvoxTranslateContent` (boolean).
+- Round-trip check after editing any English prompt that tells the user what to
+  say ("Say: …"): speak its Spanish translation and confirm the debug line
+  "→ EN (…)" produces a working command.
+
+Known issues found during the Spanish work (not changed):
+
+- `src/` and `content.js` are the old path; `src/model/tts.js` and
+  `src/model/navigation.js` send page text to a Heroku server. They are not loaded
+  by the manifest — keep it that way (offline / no third-party requirement).
+- `src/view/popup.html` is not wired (no `"action"` in the manifest), references a
+  missing `../scripts/defaults.js`, and loads its logo from imgur.
+- `actions.js` calls `llmAnswerQuestion` / `llmRewriteForSpeech` without importing
+  them, so due-date answers always use the plain fallback text (which works).
+  Don't re-add the import: `tiny_llm.js` needs a local Ollama server.
+- The login overlay's `saveAndClose` uses `findFirst` / `USERNAME_SELECTORS`,
+  which only exist inside `actLogIn`, so saving from the overlay throws.
+- Credentials are stored in plain text in `chrome.storage.local`, and voice-entered
+  passwords are lower-cased by `options.js` / the overlay.
+- Unused files: `lib/convox_actions.js`, `lib/models.js`, `lib/memory.js`,
+  `lib/nlp.js`, `lib/tiny_llm.js`, `lib/planner.js`, and the `@mlc-ai/web-llm`
+  dependency.

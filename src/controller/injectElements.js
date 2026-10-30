@@ -32,11 +32,9 @@ function injectElements() {
 		alignItems: "center",
 	});
 
-	const headerText = document.createElement("span");
-	headerText.textContent = "Transcript";
+	headerText = document.createElement("span");
 
-	const toggleButton = document.createElement("button");
-	toggleButton.textContent = "Show Text Input";
+	toggleButton = document.createElement("button");
 	Object.assign(toggleButton.style, {
 		padding: "3px 8px",
 		backgroundColor: "#444",
@@ -59,20 +57,15 @@ function injectElements() {
 	});
 	speechDisplay.textContent = "";
 
-	const textInput = document.createElement("input");
+	textInput = document.createElement("input");
 	textInput.className = "voice-input";
 	// Initially hide the text input
 	textInput.style.display = "none";
 
 	// Add event listener for toggle button
 	toggleButton.addEventListener("click", () => {
-		if (textInput.style.display === "none") {
-			textInput.style.display = "block";
-			toggleButton.textContent = "Hide Text Input";
-		} else {
-			textInput.style.display = "none";
-			toggleButton.textContent = "Show Text Input";
-		}
+		textInput.style.display = textInput.style.display === "none" ? "block" : "none";
+		applyLabels(); // updates button text and aria-expanded
 	});
 
 	speechContainer.appendChild(header);

@@ -88,3 +88,35 @@ University of North Texas
 ## Conclusion
 
 Canvox demonstrates that a hybrid rule-based and LLM-assisted approach can make Canvas more accessible by improving reliability for common tasks while preserving the flexibility of natural-language voice interaction.
+
+<!-- canvox-spanish-support -->
+
+## Spanish support (Español)
+
+Convox can be used in Spanish. Switch with the **🌐 Español** button in the Convox
+panel, or in **chrome://extensions → Convox → Details → Extension options → Language**.
+
+How it works:
+
+- Spanish commands are converted to English by an offline layer
+  (`lib/translate.js`) and then run through the **unchanged** English pipeline
+  (`lib/actions.js` → `lib/intent.js`).
+- Common commands are matched by a built-in Spanish phrase list; everything else
+  uses **Chrome's built-in on-device Translator API**. No cloud translation, no
+  API keys, no third-party services.
+- Convox's spoken replies are translated to Spanish on-device. Canvas page content
+  (announcements, messages, page reading) is read in its original language unless
+  "Read Canvas page content in Spanish" is turned on.
+- Interface text comes from `_locales/en` and `_locales/es` (`chrome.i18n` format).
+
+Requirements and limits:
+
+- Desktop Chrome with the built-in Translator API (Chrome 138+). The Spanish
+  language pack downloads **once** (press the language button while online);
+  after that translation works offline.
+- **Voice input:** Chrome's speech recognition uses Google's online service unless
+  on-device recognition is available on that computer (newer Chrome; Convox uses
+  it automatically in Spanish mode when installed). Typed commands always work offline.
+- Keep **Canvas's own language set to English**. Some features (compose, announcements,
+  due-date detection on the page) look for English words in Canvas's interface.
+- Run the tests with `npm test`.

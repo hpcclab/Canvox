@@ -3,6 +3,8 @@
 // - Accessible, draggable, collapsible, debug-friendly
 // - Cross-platform shortcuts (Mac + Windows/Linux) — FIXED on Mac by using e.code
 // - Persists transcript + UI state (position, minimized, collapsed panels, verbosity)
+// - Spanish support: offline translation layer in front of the existing English
+//   command pipeline (lib/translate.js + lib/i18n.js). English is unchanged.
 //
 // Notes:
 // - This runs on the Canvas page context as a content script.
@@ -74,6 +76,54 @@
 		return next;
 	}
 
+	function isExtensionAlive() {
+		try {
+			return !!chrome?.runtime?.id;
+		} catch {
+			return false;
+		}
+	}
+
+	// ===========================================================================
+	// Language layer (Spanish support)
+	// ===========================================================================
+	// lib/i18n.js and lib/translate.js are imported WITHOUT a ?v= query so that
+	// this file and lib/actions.js share one instance of each module (module
+	// identity is the full URL). If loading fails, everything stays English.
+	let L = null; // merged exports of i18n.js + translate.js
+
+	async function bootLanguage() {
+		try {
+			const i18n = await import(chrome.runtime.getURL("lib/i18n.js"));
+			const tr = await import(chrome.runtime.getURL("lib/translate.js"));
+			await i18n.initI18n();
+			L = { ...i18n, ...tr };
+		} catch (e) {
+			console.warn("[Convox Test] Language layer unavailable; English only.", e);
+		}
+	}
+
+	// T("key", "English fallback", [subs]) — English fallback is the original text,
+	// so the English UI is identical even if the language layer fails to load.
+	const T = (key, fallback, subs) => {
+		const s = L?.t?.(key, subs);
+		return s && s !== key ? s : fallback;
+	};
+	const isSpanish = () => L?.getLang?.() === "es";
+
+	// Speak text that is ALREADY in the user's language (built from T()).
+	function speakLocalized(text) {
+		try {
+			const u = new SpeechSynthesisUtterance(text);
+			L?.markLocalized?.(u);
+			window.speechSynthesis.cancel();
+			window.speechSynthesis.speak(u);
+		} catch {}
+	}
+
+	// ===========================================================================
+	// Transcript
+	// ===========================================================================
 	let convo = loadTranscript(); // { role: "user"|"convox"|"system", text, ts, level? }
 
 	function pushConvo(role, text, level = "info") {
@@ -82,7 +132,13 @@
 		convo.push({ role, text: line, ts: nowTS(), level });
 		saveTranscript(convo);
 		renderLog();
-		announce(`${role === "user" ? "You" : role === "convox" ? "Convox" : "System"}: ${line}`);
+		const who =
+			role === "user"
+				? T("speaker_you", "You")
+				: role === "convox"
+					? T("speaker_convox", "Convox")
+					: T("speaker_system", "System");
+		announce(`${who}: ${line}`);
 	}
 
 	function convoToText(filtered = null) {
@@ -94,14 +150,6 @@
 				return `[${m.ts}] ${who} (${lvl}): ${m.text}`;
 			})
 			.join("\n");
-	}
-
-	function isExtensionAlive() {
-		try {
-			return !!chrome?.runtime?.id;
-		} catch {
-			return false;
-		}
 	}
 
 	// ===========================================================================
@@ -137,13 +185,14 @@
 	let reloadedOnce = false;
 
 	async function safeImportActions() {
+		let url = "";
 		try {
 			if (!isExtensionAlive()) {
 				throw new Error("Extension context invalidated");
 			}
 
 			const ver = chrome?.runtime?.getManifest?.()?.version || "dev";
-			const url = chrome.runtime.getURL(`lib/actions.js?v=${encodeURIComponent(ver)}`);
+			url = chrome.runtime.getURL(`lib/actions.js?v=${encodeURIComponent(ver)}`);
 			return await import(url);
 		} catch (err) {
 			const msg = String(err?.message || err);
@@ -177,6 +226,41 @@
 	}
 
 	// ===========================================================================
+	// Spanish → English normalization (before the existing English pipeline)
+	// ===========================================================================
+	// Returns the text to hand to handleUtterance(), or null to skip the command.
+	async function toCommandText(text, getInputContext) {
+		if (!isSpanish() || !L?.toEnglish) return text; // English: untouched
+
+		let ctx = {};
+		try {
+			ctx = (await getInputContext?.()) || {};
+		} catch {}
+
+		// A wizard is collecting free text (message body, subject, recipient,
+		// discussion title/content): keep the user's words exactly as spoken.
+		if (ctx.freeText) {
+			if (L.isCancelPhrase(text)) {
+				pushConvo("system", "→ EN (cancel): cancel", "debug");
+				return "cancel";
+			}
+			pushConvo("system", "→ dictation kept as spoken", "debug");
+			return text;
+		}
+
+		const norm = await L.toEnglish(text, { protectTerms: L.termsFromLabels(ctx.labels || []) });
+		pushConvo("system", `→ EN (${norm.source}): ${norm.text}`, "debug");
+
+		if (norm.source === "untranslated") {
+			const msg = T("msg_lang_missing", "Spanish translation isn't ready yet.");
+			pushConvo("system", msg, "warn");
+			speakLocalized(msg);
+			return null;
+		}
+		return norm.text;
+	}
+
+	// ===========================================================================
 	// Actions runner
 	// ===========================================================================
 	async function runUtterance(text) {
@@ -184,13 +268,16 @@
 		const verbose = !!uiSt.verbose;
 
 		try {
-			const { handleUtterance, initAutoResume } = await safeImportActions();
+			const { handleUtterance, initAutoResume, getInputContext } = await safeImportActions();
 			initAutoResume?.();
 
 			pushConvo("user", text, "info");
 
+			const commandText = await toCommandText(text, getInputContext);
+			if (commandText == null) return;
+
 			const t0 = performance.now();
-			const out = await handleUtterance(text);
+			const out = await handleUtterance(commandText); // never pass a 2nd arg (it is the intent detector)
 			const dt = Math.round(performance.now() - t0);
 
 			if (verbose) logToast("handleUtterance output:", out);
@@ -211,11 +298,7 @@
 
 			saveUIState({ lastError: msg, lastErrorAt: new Date().toISOString() });
 
-			try {
-				const u = new SpeechSynthesisUtterance("Sorry — I hit an error. Check the console for details.");
-				window.speechSynthesis.cancel();
-				window.speechSynthesis.speak(u);
-			} catch {}
+			speakLocalized(T("msg_error_spoken", "Sorry — I hit an error. Check the console for details."));
 		}
 	}
 
@@ -267,6 +350,15 @@
 
 		parts.push(`links on page: ${links.length} (sample: ${sample.join(" | ") || "—"})`);
 
+		// Language diagnostics (Spanish support)
+		parts.push(`language: ${L?.getLang?.() || "en (language layer not loaded)"}`);
+		if (L) {
+			try {
+				parts.push(`Spanish translation pack: ${await L.languagePackStatus("es", "en")}`);
+				parts.push(`Spanish on-device voice input: ${await L.localSpeechStatus(L.speechLocale("es"))}`);
+			} catch {}
+		}
+
 		try {
 			const { speak } = await safeImportActions();
 			speak?.("Convox self-test: Speech is working.");
@@ -300,12 +392,17 @@
 	let micBtn = null;
 	let submitBtn = null;
 	let verboseBtn = null;
+	let langBtn = null;
 	let collapseLogBtn = null;
 	let collapseControlsBtn = null;
 
 	let recognizer = null;
 	let listening = false;
 	let autoSubmitTimer = null;
+
+	// On-device recognition is used only in Spanish mode (English keeps today's behavior).
+	let localSpeechOk = false;
+	let voiceNoticeShown = false;
 
 	// ===========================================================================
 	// Accessibility: live region announcements
@@ -353,7 +450,7 @@
 		if (rows.length === 0) {
 			const empty = document.createElement("div");
 			empty.className = "cx-log-empty";
-			empty.textContent = q ? "No matches." : "No logs yet.";
+			empty.textContent = q ? T("log_no_matches", "No matches.") : T("log_empty", "No logs yet.");
 			frag.appendChild(empty);
 		} else {
 			for (const m of rows) {
@@ -367,7 +464,12 @@
 
 				const badge = document.createElement("span");
 				badge.className = "cx-badge";
-				badge.textContent = m.role === "user" ? "YOU" : m.role === "convox" ? "CONVOX" : "SYSTEM";
+				badge.textContent =
+					m.role === "user"
+						? T("role_you", "YOU")
+						: m.role === "convox"
+							? T("role_convox", "CONVOX")
+							: T("role_system", "SYSTEM");
 				line.appendChild(badge);
 
 				const lvl = document.createElement("span");
@@ -419,7 +521,7 @@
 
 		try {
 			await navigator.clipboard.writeText(txt);
-			pushConvo("system", "Conversation copied to clipboard.", "info");
+			pushConvo("system", T("msg_copied", "Conversation copied to clipboard."), "info");
 		} catch {
 			try {
 				const ta = document.createElement("textarea");
@@ -428,7 +530,7 @@
 				ta.select();
 				document.execCommand("copy");
 				document.body.removeChild(ta);
-				pushConvo("system", "Conversation copied to clipboard.", "info");
+				pushConvo("system", T("msg_copied", "Conversation copied to clipboard."), "info");
 			} catch {
 				alert("Copy failed. You can manually select and copy from the log box.");
 			}
@@ -440,20 +542,57 @@
 		try {
 			localStorage.removeItem(STORE_KEY);
 		} catch {}
-		pushConvo("system", "Conversation cleared.", "info");
+		pushConvo("system", T("msg_cleared", "Conversation cleared."), "info");
 		renderLog();
 	}
 
 	function stopSpeaking() {
 		try {
 			window.speechSynthesis?.cancel?.();
-			pushConvo("system", "Stopped speaking.", "info");
+			pushConvo("system", T("msg_stopped_speaking", "Stopped speaking."), "info");
 		} catch {}
 	}
 
 	function stopListening() {
 		try {
 			recognizer?.stop?.();
+		} catch {}
+	}
+
+	// ===========================================================================
+	// Listening (shared by mic button + shortcut)
+	// ===========================================================================
+	async function refreshLocalSpeech() {
+		localSpeechOk = false;
+		if (!isSpanish() || !L?.localSpeechStatus) return;
+		try {
+			localSpeechOk = (await L.localSpeechStatus(L.speechLocale())) === "available";
+		} catch {}
+	}
+
+	function startListening() {
+		if (!recognizer || listening) return;
+
+		// Start the one-time Spanish pack download while this click/keypress
+		// still counts as a user gesture (must run before any await).
+		if (isSpanish()) L.prepareSpanish?.();
+
+		recognizer.lang = L?.speechLocale?.() || "en-US";
+		if ("processLocally" in recognizer) {
+			recognizer.processLocally = isSpanish() && localSpeechOk;
+		}
+
+		if (isSpanish() && !localSpeechOk && !voiceNoticeShown) {
+			voiceNoticeShown = true;
+			pushConvo(
+				"system",
+				T("msg_voice_cloud", "Voice input on this computer uses Google's online speech service."),
+				"info",
+			);
+		}
+
+		try {
+			recognizer.start();
 		} catch {}
 	}
 
@@ -465,7 +604,7 @@
 	}
 
 	function speakHelp() {
-		const msg =
+		const englishMsg =
 			`${UI_TITLE} shortcuts: ` +
 			`${shortcutLabel("L")} listen/stop. ` +
 			`${shortcutLabel("S")} submit. ` +
@@ -481,13 +620,10 @@
 			`${shortcutLabel("V")} verbose console logging. ` +
 			`Press Escape to stop listening/speaking.`;
 
-		pushConvo("system", "Help: " + msg, "info");
+		const msg = T("msg_help", englishMsg, [UI_TITLE, SHORTCUT_PREFIX]);
 
-		try {
-			const u = new SpeechSynthesisUtterance(msg);
-			window.speechSynthesis.cancel();
-			window.speechSynthesis.speak(u);
-		} catch {}
+		pushConvo("system", T("msg_help_prefix", "Help: ") + msg, "info");
+		speakLocalized(msg);
 	}
 
 	// ===========================================================================
@@ -496,7 +632,7 @@
 	function setMinimized(minimized) {
 		if (!content) return;
 		content.style.display = minimized ? "none" : "block";
-		minimizeBtn.textContent = minimized ? "➕ Show" : "➖ Min";
+		minimizeBtn.textContent = minimized ? T("btn_show", "➕ Show") : T("btn_minimize", "➖ Min");
 		minimizeBtn.setAttribute("aria-pressed", minimized ? "true" : "false");
 		saveUIState({ minimized });
 	}
@@ -518,11 +654,13 @@
 		if (controlsWrap) controlsWrap.style.display = collapsed.controls ? "none" : "block";
 
 		if (collapseLogBtn) {
-			collapseLogBtn.textContent = collapsed.log ? "📜 Show Log" : "📜 Hide Log";
+			collapseLogBtn.textContent = collapsed.log ? T("btn_show_log", "📜 Show Log") : T("btn_hide_log", "📜 Hide Log");
 			collapseLogBtn.setAttribute("aria-pressed", collapsed.log ? "true" : "false");
 		}
 		if (collapseControlsBtn) {
-			collapseControlsBtn.textContent = collapsed.controls ? "🎛️ Show Controls" : "🎛️ Hide Controls";
+			collapseControlsBtn.textContent = collapsed.controls
+				? T("btn_show_controls", "🎛️ Show Controls")
+				: T("btn_hide_controls", "🎛️ Hide Controls");
 			collapseControlsBtn.setAttribute("aria-pressed", collapsed.controls ? "true" : "false");
 		}
 	}
@@ -531,6 +669,70 @@
 		try {
 			inputEl?.focus?.();
 		} catch {}
+	}
+
+	// ===========================================================================
+	// Language toggle (Spanish support)
+	// ===========================================================================
+	function updateLanguageButton() {
+		if (!langBtn) return;
+		langBtn.textContent = T("btn_language", "🌐 Español");
+		langBtn.setAttribute("aria-label", T("btn_language_aria", "Switch language to Spanish"));
+	}
+
+	async function toggleLanguage() {
+		if (!L) return;
+		const next = isSpanish() ? "en" : "es";
+
+		// Start downloads while the click still counts as a user gesture (before any await).
+		let packs = null;
+		let speechPack = null;
+		if (next === "es") {
+			let lastPct = -25;
+			packs = L.prepareSpanish({
+				onProgress: (loaded) => {
+					const pct = Math.round((loaded || 0) * 100);
+					if (pct - lastPct >= 25 || pct === 100) {
+						lastPct = pct;
+						pushConvo("system", T("msg_lang_downloading", `Downloading… ${pct}%`, [pct]), "info");
+					}
+				},
+			});
+			speechPack = L.installLocalSpeech?.(L.speechLocale("es"));
+		}
+
+		await L.setLang(next);
+
+		container?.setAttribute("lang", next);
+		updateLanguageButton();
+		if (recognizer) recognizer.lang = L.speechLocale();
+		voiceNoticeShown = false;
+
+		const switched = T("msg_lang_switched", next === "es" ? "Idioma: español." : "Language: English.");
+		pushConvo("system", switched, "info");
+		speakLocalized(switched);
+
+		if (packs) {
+			const ready = await packs;
+			pushConvo(
+				"system",
+				ready.input ? T("msg_lang_ready", "Spanish language pack ready.") : T("msg_lang_missing", ""),
+				ready.input ? "info" : "warn",
+			);
+		}
+		if (speechPack) await speechPack;
+		await refreshLocalSpeech();
+		if (next === "es") {
+			pushConvo(
+				"system",
+				localSpeechOk
+					? T("msg_voice_local", "Voice input runs on this computer.")
+					: T("msg_voice_cloud", "Voice input uses Google's online speech service."),
+				"info",
+			);
+			voiceNoticeShown = true;
+		}
+		pushConvo("system", T("msg_reload_for_labels", "Reload the page to update all labels."), "info");
 	}
 
 	// ===========================================================================
@@ -660,10 +862,19 @@
 	// ===========================================================================
 	// Build UI
 	// ===========================================================================
-	function ensureTestUI() {
+	async function ensureTestUI() {
 		if (document.getElementById("convox-test-container")) return;
 
 		patchTTSOnce();
+
+		// Language layer: load before building labels. The speech hook must be
+		// installed AFTER patchTTSOnce so the transcript shows the text that is
+		// actually spoken (Spanish in Spanish mode).
+		await bootLanguage();
+		L?.installSpeechTranslation?.();
+		await refreshLocalSpeech();
+
+		if (document.getElementById("convox-test-container")) return;
 
 		const uiSt = loadUIState();
 		const minimized = !!uiSt.minimized;
@@ -776,7 +987,9 @@
 		container = document.createElement("div");
 		container.id = "convox-test-container";
 		container.setAttribute("role", "region");
-		container.setAttribute("aria-label", `${UI_TITLE} floating panel`);
+		container.setAttribute("aria-label", T("panel_aria", `${UI_TITLE} floating panel`, [UI_TITLE]));
+		// Screen readers pick the voice from the nearest lang attribute; the Canvas page is lang="en".
+		container.setAttribute("lang", L?.getLang?.() || "en");
 		container.style.bottom = "16px";
 		container.style.right = "16px";
 
@@ -797,7 +1010,9 @@
 
 		const headerSub = document.createElement("div");
 		headerSub.id = "convox-test-subtitle";
-		headerSub.textContent = `Shortcuts: ${shortcutLabel("H")} help • Drag title to move`;
+		headerSub.textContent = T("ui_subtitle", `Shortcuts: ${shortcutLabel("H")} help • Drag title to move`, [
+			shortcutLabel("H"),
+		]);
 		titleWrap.appendChild(headerSub);
 
 		const headerBtns = document.createElement("div");
@@ -807,16 +1022,16 @@
 		helpBtn = document.createElement("button");
 		helpBtn.className = "cx-btn";
 		helpBtn.type = "button";
-		helpBtn.textContent = "❓ Help";
+		helpBtn.textContent = T("btn_help", "❓ Help");
 		helpBtn.title = `Help (${shortcutLabel("H")})`;
-		helpBtn.setAttribute("aria-label", "Help");
+		helpBtn.setAttribute("aria-label", T("btn_help", "Help").replace(/^\S+\s/, ""));
 		helpBtn.addEventListener("click", speakHelp);
 		headerBtns.appendChild(helpBtn);
 
 		minimizeBtn = document.createElement("button");
 		minimizeBtn.className = "cx-btn";
 		minimizeBtn.type = "button";
-		minimizeBtn.textContent = minimized ? "➕ Show" : "➖ Min";
+		minimizeBtn.textContent = minimized ? T("btn_show", "➕ Show") : T("btn_minimize", "➖ Min");
 		minimizeBtn.title = `Minimize/Show (${shortcutLabel("M")})`;
 		minimizeBtn.setAttribute("aria-pressed", minimized ? "true" : "false");
 		headerBtns.appendChild(minimizeBtn);
@@ -846,7 +1061,7 @@
 		collapseLogBtn = document.createElement("button");
 		collapseLogBtn.className = "cx-btn cx-btn-secondary";
 		collapseLogBtn.type = "button";
-		collapseLogBtn.textContent = "📜 Hide Log";
+		collapseLogBtn.textContent = T("btn_hide_log", "📜 Hide Log");
 		collapseLogBtn.setAttribute("aria-pressed", "false");
 		collapseLogBtn.addEventListener("click", () => {
 			const uiSt2 = loadUIState();
@@ -858,7 +1073,7 @@
 		collapseControlsBtn = document.createElement("button");
 		collapseControlsBtn.className = "cx-btn cx-btn-secondary";
 		collapseControlsBtn.type = "button";
-		collapseControlsBtn.textContent = "🎛️ Hide Controls";
+		collapseControlsBtn.textContent = T("btn_hide_controls", "🎛️ Hide Controls");
 		collapseControlsBtn.setAttribute("aria-pressed", "false");
 		collapseControlsBtn.addEventListener("click", () => {
 			const uiSt2 = loadUIState();
@@ -866,6 +1081,18 @@
 			setCollapsed("controls", !col.controls);
 		});
 		toggles.appendChild(collapseControlsBtn);
+
+		// Language toggle (Spanish support). The click supplies the user gesture
+		// Chrome needs to download the on-device language packs the first time.
+		langBtn = document.createElement("button");
+		langBtn.className = "cx-btn cx-btn-secondary";
+		langBtn.type = "button";
+		updateLanguageButton();
+		langBtn.disabled = !L;
+		langBtn.addEventListener("click", () => {
+			toggleLanguage().catch((e) => console.warn("[Convox Test] language switch failed:", e));
+		});
+		toggles.appendChild(langBtn);
 
 		const dbgRow = document.createElement("div");
 		dbgRow.className = "cx-row";
@@ -940,15 +1167,15 @@
 		searchEl = document.createElement("input");
 		searchEl.className = "cx-search";
 		searchEl.type = "text";
-		searchEl.placeholder = "Search logs (e.g., error, open course, conf 0.9)…";
-		searchEl.setAttribute("aria-label", "Search logs");
+		searchEl.placeholder = T("search_placeholder", "Search logs (e.g., error, open course, conf 0.9)…");
+		searchEl.setAttribute("aria-label", T("search_aria", "Search logs"));
 		searchEl.addEventListener("input", renderLog);
 		logTop.appendChild(searchEl);
 
 		const logBox = document.createElement("div");
 		logBox.className = "cx-logbox";
 		logBox.setAttribute("role", "log");
-		logBox.setAttribute("aria-label", "Conversation transcript");
+		logBox.setAttribute("aria-label", T("log_aria", "Conversation transcript"));
 		logBox.setAttribute("aria-live", "off");
 		logWrap.appendChild(logBox);
 
@@ -963,7 +1190,7 @@
 		copyBtn = document.createElement("button");
 		copyBtn.className = "cx-btn cx-btn-secondary";
 		copyBtn.type = "button";
-		copyBtn.textContent = "📋 Copy";
+		copyBtn.textContent = T("btn_copy", "📋 Copy");
 		copyBtn.title = `Copy transcript (${shortcutLabel("C")})`;
 		copyBtn.addEventListener("click", copyConversation);
 		row1.appendChild(copyBtn);
@@ -971,7 +1198,7 @@
 		clearBtn = document.createElement("button");
 		clearBtn.className = "cx-btn cx-btn-secondary";
 		clearBtn.type = "button";
-		clearBtn.textContent = "🧹 Clear";
+		clearBtn.textContent = T("btn_clear", "🧹 Clear");
 		clearBtn.title = `Clear transcript (${shortcutLabel("R")})`;
 		clearBtn.addEventListener("click", clearConversation);
 		row1.appendChild(clearBtn);
@@ -979,7 +1206,7 @@
 		diagBtn = document.createElement("button");
 		diagBtn.className = "cx-btn cx-btn-secondary";
 		diagBtn.type = "button";
-		diagBtn.textContent = "🩺 Diagnose";
+		diagBtn.textContent = T("btn_diagnose", "🩺 Diagnose");
 		diagBtn.title = `Diagnose (${shortcutLabel("D")})`;
 		diagBtn.addEventListener("click", () => {
 			pushConvo("user", "diagnose", "info");
@@ -998,8 +1225,8 @@
 		inputEl = document.createElement("input");
 		inputEl.type = "text";
 		inputEl.className = "cx-input";
-		inputEl.setAttribute("aria-label", "Command input");
-		inputEl.placeholder = "Type a command or use mic 🎤";
+		inputEl.setAttribute("aria-label", T("input_aria", "Command input"));
+		inputEl.placeholder = T("input_placeholder", "Type a command or use mic 🎤");
 		inputEl.title = `Focus command box (${shortcutLabel("F")})`;
 		controlsWrap.appendChild(inputEl);
 
@@ -1011,7 +1238,7 @@
 		micBtn = document.createElement("button");
 		micBtn.className = "cx-btn cx-btn-secondary";
 		micBtn.type = "button";
-		micBtn.textContent = "🎤 Listen";
+		micBtn.textContent = T("btn_listen", "🎤 Listen");
 		micBtn.title = `Listen/Stop (${shortcutLabel("L")})`;
 		micBtn.setAttribute("aria-pressed", "false");
 		controlsRow.appendChild(micBtn);
@@ -1019,7 +1246,7 @@
 		stopSpeakBtn = document.createElement("button");
 		stopSpeakBtn.className = "cx-btn cx-btn-danger";
 		stopSpeakBtn.type = "button";
-		stopSpeakBtn.textContent = "🛑 Stop Speaking";
+		stopSpeakBtn.textContent = T("btn_stop_speaking", "🛑 Stop Speaking");
 		stopSpeakBtn.title = `Stop speaking (${shortcutLabel("X")})`;
 		stopSpeakBtn.addEventListener("click", stopSpeaking);
 		controlsRow.appendChild(stopSpeakBtn);
@@ -1027,14 +1254,17 @@
 		submitBtn = document.createElement("button");
 		submitBtn.className = "cx-btn cx-btn-primary";
 		submitBtn.type = "button";
-		submitBtn.textContent = "✅ Submit";
+		submitBtn.textContent = T("btn_submit", "✅ Submit");
 		submitBtn.title = `Submit (${shortcutLabel("S")})`;
 		controlsRow.appendChild(submitBtn);
 
 		const hints = document.createElement("div");
 		hints.className = "cx-muted";
 		hints.style.marginTop = "8px";
-		hints.textContent = `Tip: Say "due today" / "due this week" / "open course 4901". Press Escape to stop.`;
+		hints.textContent = T(
+			"hint_examples",
+			`Tip: Say "due today" / "due this week" / "open course 4901". Press Escape to stop.`,
+		);
 		controlsWrap.appendChild(hints);
 
 		setMinimized(minimized);
@@ -1044,7 +1274,8 @@
 			const text = (inputEl.value || "").trim();
 			if (!text) return;
 
-			if (text.toLowerCase().includes("diagnose")) {
+			// "diagnóstico" / "diagnosticar" also open the diagnose dialog in Spanish mode.
+			if (/diagnose|diagn[oó]stic/i.test(text)) {
 				pushConvo("user", text, "info");
 				diagnose();
 			} else {
@@ -1054,9 +1285,21 @@
 			focusInput();
 		}
 
-		submitBtn.addEventListener("click", submitCommand);
+		// Clicking Submit / pressing Enter is a user gesture: use it to start the
+		// one-time Spanish pack download if it hasn't happened yet.
+		function prepareLanguageOnGesture() {
+			if (isSpanish()) L?.prepareSpanish?.();
+		}
+
+		submitBtn.addEventListener("click", () => {
+			prepareLanguageOnGesture();
+			submitCommand();
+		});
 		inputEl.addEventListener("keydown", (e) => {
-			if (e.key === "Enter") submitCommand();
+			if (e.key === "Enter") {
+				prepareLanguageOnGesture();
+				submitCommand();
+			}
 		});
 
 		const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1064,18 +1307,16 @@
 			logToast("SpeechRecognition not supported in this browser.");
 			micBtn.disabled = true;
 			micBtn.setAttribute("aria-disabled", "true");
-			pushConvo("system", "SpeechRecognition not supported in this browser.", "warn");
+			pushConvo("system", T("msg_no_speech_rec", "SpeechRecognition not supported in this browser."), "warn");
 		} else {
 			recognizer = new SpeechRecognition();
 			recognizer.continuous = false;
 			recognizer.interimResults = true;
-			recognizer.lang = "en-US";
+			recognizer.lang = L?.speechLocale?.() || "en-US";
 
 			micBtn.addEventListener("click", () => {
 				if (!listening) {
-					try {
-						recognizer.start();
-					} catch {}
+					startListening();
 				} else {
 					stopListening();
 				}
@@ -1083,19 +1324,19 @@
 
 			recognizer.addEventListener("start", () => {
 				listening = true;
-				micBtn.textContent = "🛑 Stop";
+				micBtn.textContent = T("btn_stop", "🛑 Stop");
 				micBtn.setAttribute("aria-pressed", "true");
 				inputEl.value = "";
-				pushConvo("system", "Listening…", "info");
+				pushConvo("system", T("msg_listening", "Listening…"), "info");
 			});
 
 			recognizer.addEventListener("end", () => {
 				listening = false;
-				micBtn.textContent = "🎤 Listen";
+				micBtn.textContent = T("btn_listen", "🎤 Listen");
 				micBtn.setAttribute("aria-pressed", "false");
 				if (autoSubmitTimer) clearTimeout(autoSubmitTimer);
 				autoSubmitTimer = null;
-				pushConvo("system", "Stopped listening.", "info");
+				pushConvo("system", T("msg_stopped_listening", "Stopped listening."), "info");
 			});
 
 			recognizer.addEventListener("result", (event) => {
@@ -1149,13 +1390,14 @@
 			if (shortcutMatches(e, "l")) {
 				if (!recognizer) return;
 				if (!listening) {
-					try {
-						recognizer.start();
-					} catch {}
+					startListening();
 				} else stopListening();
 				return;
 			}
-			if (shortcutMatches(e, "s")) return submitCommand();
+			if (shortcutMatches(e, "s")) {
+				prepareLanguageOnGesture();
+				return submitCommand();
+			}
 			if (shortcutMatches(e, "x")) return stopSpeaking();
 			if (shortcutMatches(e, "c")) return copyConversation();
 			if (shortcutMatches(e, "r")) return clearConversation();
@@ -1199,7 +1441,11 @@
 
 		document.body.appendChild(container);
 		bootActionsRuntime().catch(() => {});
-		pushConvo("system", `${UI_TITLE} UI ready. Logs persist across pages until you press Clear.`, "info");
+		pushConvo(
+			"system",
+			T("msg_ui_ready", `${UI_TITLE} UI ready. Logs persist across pages until you press Clear.`, [UI_TITLE]),
+			"info",
+		);
 		renderLog();
 		focusInput();
 	}
@@ -1211,11 +1457,11 @@
 		document.addEventListener(
 			"DOMContentLoaded",
 			() => {
-				ensureTestUI();
+				ensureTestUI().catch((e) => console.error("[Convox Test] UI boot failed:", e));
 			},
 			{ once: true },
 		);
 	} else {
-		ensureTestUI();
+		ensureTestUI().catch((e) => console.error("[Convox Test] UI boot failed:", e));
 	}
 })();

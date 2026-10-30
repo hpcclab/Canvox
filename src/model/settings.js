@@ -60,17 +60,14 @@ async function toggleMicrophone(recognitionState) {
 	} else {
 		if (!recognitionState.recognition) {
 			const deviceId = await getSettingWithDefault("audioInput", DEFAULT_SETTINGS.audioInput);
-			initRecognition(recognitionState, deviceId);
-			recognitionState.recognition.start();
-			recognitionState.isRecognizing = true;
-		} else {
-			recognitionState.recognition.start();
-			recognitionState.isRecognizing = true;
+			await initRecognition(recognitionState, deviceId);
 		}
+		if (!recognitionState.recognition) return; // init failed (e.g. SpeechRecognition unsupported)
+		recognitionState.recognition.start();
+		recognitionState.isRecognizing = true;
 	}
 
-	// Update the storage to keep popup UI in sync. So that when the user presses hotkey, the popup reflects the correct state
-	// of the microphone (active/inactive).
+	// Keep the popup UI in sync with the hotkey state
 	chrome.storage.sync.set({ microphoneActive: recognitionState.isRecognizing });
 }
 
@@ -172,6 +169,12 @@ function extensionActionRouter(destination, recognitionState) {
 	return true; // Successfully handled an extension action
 }
 
+// Returns the user's Convox language ("en" or "es").
+// Same storage key as lib/i18n.js.
+function getLanguage() {
+	return getSettingWithDefault("canvoxLang", "en");
+}
+
 export const POSSIBLE_EXTENSION_ACTIONS = [
 	"micmute",
 	"volume up",
@@ -190,4 +193,5 @@ export {
 	setVolume,
 	isHotkeyMatch,
 	extensionActionRouter,
+	getLanguage,
 };
