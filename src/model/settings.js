@@ -169,6 +169,12 @@ function extensionActionRouter(destination, recognitionState) {
 	return true; // Successfully handled an extension action
 }
 
+// Returns the user's Convox language ("en" or "es").
+// Same storage key as lib/i18n.js.
+function getLanguage() {
+	return getSettingWithDefault("canvoxLang", "en");
+}
+
 export const POSSIBLE_EXTENSION_ACTIONS = [
 	"micmute",
 	"volume up",
@@ -188,5 +194,4 @@ export const POSSIBLE_EXTENSION_ACTIONS = [
   	isHotkeyMatch,
   	extensionActionRouter,
   	getLanguage,
-  	setLanguage,
   };

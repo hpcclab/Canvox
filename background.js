@@ -1,5 +1,35 @@
 "use strict";
-import { DEFAULT_SETTINGS } from "./src/model/settings.js";
+
+// Default settings saved on first install.
+// Copied from src/model/settings.js (same values). The service worker must NOT
+// import that file: it pulls in the old src/ page code (recognition.js,
+// router.js, injectElements.js, …), which touches window/document and makes
+// the service worker fail to start ("Service worker registration failed").
+// If you change a default in src/model/settings.js, change it here too.
+const DEFAULT_SETTINGS = {
+	// Theme
+	theme: "dark",
+
+	// Hotkeys
+	hotkeyMicrophone: { ctrl: false, alt: false, shift: false, key: "x" },
+	hotkeyTranscript: { ctrl: true, alt: false, shift: false, key: " " }, // Ctrl + Space
+	hotkeyReadoutDown: { ctrl: false, alt: false, shift: false, key: "Down" },
+	hotkeyReadoutUp: { ctrl: false, alt: false, shift: false, key: "Up" },
+
+	// Microphone state
+	microphoneActive: false,
+	preserveMic: true,
+
+	// Transcript visibility
+	transcriptVisible: true,
+
+	// Audio preferences
+	audioInput: "default",
+	audioOutput: "default",
+
+	// Volume
+	volume: 100, // Scale 0-100
+};
 
 // =============================================================================
 // Convox MV3 Service Worker / Background

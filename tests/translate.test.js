@@ -132,6 +132,16 @@ test("chained command: 'and then the grades' gets a verb", async () => {
 	assert.equal(r.text, "Open course 4901 and then open grades");
 });
 
+test("missing 'for' between a section and a course number is restored", async () => {
+	installFakeTranslator([[/^abre mis (\[\d+\]) de matemáticas 2700$/, "Open My $1 Math 2700"]]);
+	const r = await tr.toEnglish("abre mis calificaciones de matemáticas 2700", { lang: "es" });
+	assert.equal(r.text, "Open My grades for Math 2700");
+	// homework numbers are not course numbers: no "for" added
+	installFakeTranslator([[/^abre la (\[\d+\]) 2$/, "open the $1 2"]]);
+	const r2 = await tr.toEnglish("abre la tarea 2", { lang: "es" });
+	assert.equal(r2.text, "open homework 2");
+});
+
 test("protected names are not translated", async () => {
 	installFakeTranslator([
 		[/^Quiero el de (\[\d+\]) por favor$/, "I want the one from $1 please"],
@@ -142,6 +152,14 @@ test("protected names are not translated", async () => {
 	const r = await tr.toEnglish("Quiero el de Historia por favor", { lang: "es", protectTerms: terms });
 	assert.match(r.text, /Historia/);
 	assert.doesNotMatch(r.text, /History/);
+});
+
+test("replies: 'Opening …' is sent to the translator as 'I'm opening …'", async () => {
+	assert.equal(tr.prepareReplyForTranslation("Opening announcement. GEOL 1610."), "I'm opening announcement. GEOL 1610.");
+	assert.equal(tr.prepareReplyForTranslation("Okay. Opening grades."), "Okay. I'm opening grades.");
+	assert.equal(tr.prepareReplyForTranslation("Say option 1."), "Say option 1.");
+	installFakeTranslator([[/^I'm opening announcement\. (.*)$/, "Estoy abriendo el anuncio. $1"]]);
+	assert.equal(await tr.fromEnglish("Opening announcement. GEOL 1610.", { lang: "es" }), "Estoy abriendo el anuncio. GEOL 1610.");
 });
 
 // ---- Helpers -----------------------------------------------------------------
