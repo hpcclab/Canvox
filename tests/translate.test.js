@@ -155,11 +155,17 @@ test("protected names are not translated", async () => {
 });
 
 test("replies: 'Opening …' is sent to the translator as 'I'm opening …'", async () => {
-	assert.equal(tr.prepareReplyForTranslation("Opening announcement. GEOL 1610."), "I'm opening announcement. GEOL 1610.");
+	assert.equal(
+		tr.prepareReplyForTranslation("Opening announcement. GEOL 1610."),
+		"I'm opening announcement. GEOL 1610.",
+	);
 	assert.equal(tr.prepareReplyForTranslation("Okay. Opening grades."), "Okay. I'm opening grades.");
 	assert.equal(tr.prepareReplyForTranslation("Say option 1."), "Say option 1.");
 	installFakeTranslator([[/^I'm opening announcement\. (.*)$/, "Estoy abriendo el anuncio. $1"]]);
-	assert.equal(await tr.fromEnglish("Opening announcement. GEOL 1610.", { lang: "es" }), "Estoy abriendo el anuncio. GEOL 1610.");
+	assert.equal(
+		await tr.fromEnglish("Opening announcement. GEOL 1610.", { lang: "es" }),
+		"Estoy abriendo el anuncio. GEOL 1610.",
+	);
 });
 
 // ---- Helpers -----------------------------------------------------------------

@@ -38,63 +38,62 @@ IMPORTANT RULES:
 `;
 
 export async function createGeminiPlanner() {
-  if (typeof LanguageModel === "undefined") {
-    throw new Error("Chrome Prompt API is unavailable.");
-  }
+	if (typeof LanguageModel === "undefined") {
+		throw new Error("Chrome Prompt API is unavailable.");
+	}
 
-  const PLAN_SCHEMA = {
-    type: "object",
-    properties: {
-      intent: {
-        type: "string",
-        enum: ["navigate", "read", "interact", "clarify"],
-      },
-      steps: {
-        type: "array",
-        items: {
-          type: "object",
-          properties: {
-            action: {
-              type: "string",
-              enum: ["navigate", "summarize", "read", "click", "fill", "clarify"],
-            },
-            target: { type: "string" },
-            value: { type: "string" },
-          },
-          required: ["action", "target", "value"],
-          additionalProperties: false,
-        },
-      },
-      clarification: { type: "string" },
-    },
-    required: ["intent", "steps", "clarification"],
-    additionalProperties: false,
-  };
+	const PLAN_SCHEMA = {
+		type: "object",
+		properties: {
+			intent: {
+				type: "string",
+				enum: ["navigate", "read", "interact", "clarify"],
+			},
+			steps: {
+				type: "array",
+				items: {
+					type: "object",
+					properties: {
+						action: {
+							type: "string",
+							enum: ["navigate", "summarize", "read", "click", "fill", "clarify"],
+						},
+						target: { type: "string" },
+						value: { type: "string" },
+					},
+					required: ["action", "target", "value"],
+					additionalProperties: false,
+				},
+			},
+			clarification: { type: "string" },
+		},
+		required: ["intent", "steps", "clarification"],
+		additionalProperties: false,
+	};
 
-  const availability = await LanguageModel.availability({
-    expectedInputs: [{ type: "text", languages: ["en"] }],
-    expectedOutputs: [{ type: "text", languages: ["en"] }],
-  });
+	const availability = await LanguageModel.availability({
+		expectedInputs: [{ type: "text", languages: ["en"] }],
+		expectedOutputs: [{ type: "text", languages: ["en"] }],
+	});
 
-  if (availability !== "available") {
-    throw new Error(`Gemini Nano is not ready: ${availability}`);
-  }
+	if (availability !== "available") {
+		throw new Error(`Gemini Nano is not ready: ${availability}`);
+	}
 
-const session = await LanguageModel.create({
-  expectedInputs: [{ type: "text", languages: ["en"] }],
-  expectedOutputs: [{ type: "text", languages: ["en"] }],
-  initialPrompts: [
-    {
-      role: "system",
-      content: PLANNER_INSTRUCTIONS,
-    },
-  ],
-});
+	const session = await LanguageModel.create({
+		expectedInputs: [{ type: "text", languages: ["en"] }],
+		expectedOutputs: [{ type: "text", languages: ["en"] }],
+		initialPrompts: [
+			{
+				role: "system",
+				content: PLANNER_INSTRUCTIONS,
+			},
+		],
+	});
 
-
-  return {
-    async plan(command, pageContext = "") {
-      const prompt = `
+	return {
+		async plan(command, pageContext = "") {
+			const prompt = `
 User command:
 ${command}
 
@@ -104,109 +103,100 @@ ${pageContext}
 Return only the JSON plan described in your instructions.
 `;
 
-      const response = await session.prompt(prompt, {
-        responseConstraint: PLAN_SCHEMA,
-      });
+			const response = await session.prompt(prompt, {
+				responseConstraint: PLAN_SCHEMA,
+			});
 
-      console.log("[Canvox] Raw Gemini response:", response);
+			console.log("[Canvox] Raw Gemini response:", response);
 
-      try {
-        const cleaned = response
-          .trim()
-          .replace(/^```(?:json)?\s*/i, "")
-          .replace(/\s*```$/, "");
+			try {
+				const cleaned = response
+					.trim()
+					.replace(/^```(?:json)?\s*/i, "")
+					.replace(/\s*```$/, "");
 
-        const raw = JSON.parse(cleaned);
+				const raw = JSON.parse(cleaned);
 
-        // Normalize simple, explicit Canvas navigation requests.
-        // These commands do not need a multi-step LLM plan.
-        const navigationMatch = command.match(
-          /^(?:please\s+)?(?:open|go to|navigate to|show me)\s+(?:my\s+)?(?:canvas\s+)?(home|dashboard|calendar|inbox|courses)\s*\.?$/i,
-        );
+				// Normalize simple, explicit Canvas navigation requests.
+				// These commands do not need a multi-step LLM plan.
+				const navigationMatch = command.match(
+					/^(?:please\s+)?(?:open|go to|navigate to|show me)\s+(?:my\s+)?(?:canvas\s+)?(home|dashboard|calendar|inbox|courses)\s*\.?$/i,
+				);
 
-        if (navigationMatch) {
-          const destination = navigationMatch[1].toLowerCase();
+				if (navigationMatch) {
+					const destination = navigationMatch[1].toLowerCase();
 
-          return {
-            intent: "navigate",
-            steps: [
-              {
-                action: "navigate",
-                target: destination,
-                value: "",
-              },
-            ],
-            clarification: "",
-          };
-        }
+					return {
+						intent: "navigate",
+						steps: [
+							{
+								action: "navigate",
+								target: destination,
+								value: "",
+							},
+						],
+						clarification: "",
+					};
+				}
 
-        const rawSteps = raw.steps ?? raw.plan;
+				const rawSteps = raw.steps ?? raw.plan;
 
-        if (!Array.isArray(rawSteps) || rawSteps.length === 0) {
-          throw new Error("Missing plan steps.");
-        }
+				if (!Array.isArray(rawSteps) || rawSteps.length === 0) {
+					throw new Error("Missing plan steps.");
+				}
 
-        const allowedIntents = ["navigate", "read", "interact", "clarify"];
-        const allowedActions = [
-          "navigate",
-          "summarize",
-          "read",
-          "click",
-          "fill",
-          "clarify",
-        ];
+				const allowedIntents = ["navigate", "read", "interact", "clarify"];
+				const allowedActions = ["navigate", "summarize", "read", "click", "fill", "clarify"];
 
-        const steps = rawSteps.map((step) => {
-          const actionText = String(step.action ?? "").toLowerCase();
+				const steps = rawSteps.map((step) => {
+					const actionText = String(step.action ?? "").toLowerCase();
 
-          let action;
+					let action;
 
-          if (actionText === "navigate") {
-            action = "navigate";
-          } else if (actionText === "summarize") {
-            action = "summarize";
-          } else if (actionText === "read") {
-            action = "read";
-          } else if (actionText === "click") {
-            action = "click";
-          } else if (actionText === "fill") {
-            action = "fill";
-          } else if (actionText === "clarify") {
-            action = "clarify";
-          } else {
-            throw new Error(`Unsupported planner action: ${actionText}`);
-          }
+					if (actionText === "navigate") {
+						action = "navigate";
+					} else if (actionText === "summarize") {
+						action = "summarize";
+					} else if (actionText === "read") {
+						action = "read";
+					} else if (actionText === "click") {
+						action = "click";
+					} else if (actionText === "fill") {
+						action = "fill";
+					} else if (actionText === "clarify") {
+						action = "clarify";
+					} else {
+						throw new Error(`Unsupported planner action: ${actionText}`);
+					}
 
-          return {
-            action,
-            target: String(step.target ?? step.description ?? ""),
-            value: String(step.value ?? ""),
-          };
-        });
+					return {
+						action,
+						target: String(step.target ?? step.description ?? ""),
+						value: String(step.value ?? ""),
+					};
+				});
 
-        const intent = allowedIntents.includes(raw.intent)
-          ? raw.intent
-          : "navigate";
+				const intent = allowedIntents.includes(raw.intent) ? raw.intent : "navigate";
 
-        if (steps.some((step) => !allowedActions.includes(step.action))) {
-          throw new Error("Unsupported action in plan.");
-        }
+				if (steps.some((step) => !allowedActions.includes(step.action))) {
+					throw new Error("Unsupported action in plan.");
+				}
 
-        return {
-          intent,
-          steps,
-          clarification: String(raw.clarification ?? ""),
-        };
-      } catch (error) {
-        console.error("[Canvox] Could not parse plan:", error);
-        throw new Error("Gemini Nano returned an invalid JSON plan.");
-      }
-    },
+				return {
+					intent,
+					steps,
+					clarification: String(raw.clarification ?? ""),
+				};
+			} catch (error) {
+				console.error("[Canvox] Could not parse plan:", error);
+				throw new Error("Gemini Nano returned an invalid JSON plan.");
+			}
+		},
 
-    destroy() {
-      session.destroy();
-    },
-  };
+		destroy() {
+			session.destroy();
+		},
+	};
 }
 
 console.log("[Canvox] Gemini planner module loaded.");

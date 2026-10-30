@@ -91,8 +91,8 @@ edit(
 );
 edit(
 	"recent message body",
-	"await speak(`Message: ${detail.bodyPreview}`, { raw: true, mode: \"read\" });",
-	"await speak(`Message: ${detail.bodyPreview}`, { raw: true, mode: \"read\", content: true });",
+	'await speak(`Message: ${detail.bodyPreview}`, { raw: true, mode: "read" });',
+	'await speak(`Message: ${detail.bodyPreview}`, { raw: true, mode: "read", content: true });',
 );
 edit(
 	"page/section reading (actReadPage x2, actReadNext, actRepeat)",

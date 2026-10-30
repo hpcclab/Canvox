@@ -185,13 +185,13 @@ export const POSSIBLE_EXTENSION_ACTIONS = [
 	"explain options",
 ];
 
-  export {
-  	getSettingWithDefault,
-  	DEFAULT_SETTINGS,
-  	toggleMicrophone,
-  	adjustVolume,
-  	setVolume,
-  	isHotkeyMatch,
-  	extensionActionRouter,
-  	getLanguage,
-  };
+export {
+	getSettingWithDefault,
+	DEFAULT_SETTINGS,
+	toggleMicrophone,
+	adjustVolume,
+	setVolume,
+	isHotkeyMatch,
+	extensionActionRouter,
+	getLanguage,
+};

@@ -463,6 +463,7 @@ Keep changes small and focused whenever possible.
 This makes the code easier for everyone on the team to understand, test, and review.
 
 <!-- canvox-spanish-support -->
+
 ## Spanish support — team notes
 
 - `lib/intent.js` is intentionally unchanged. To support a new Spanish phrasing,

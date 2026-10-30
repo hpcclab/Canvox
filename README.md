@@ -90,6 +90,7 @@ University of North Texas
 Canvox demonstrates that a hybrid rule-based and LLM-assisted approach can make Canvas more accessible by improving reliability for common tasks while preserving the flexibility of natural-language voice interaction.
 
 <!-- canvox-spanish-support -->
+
 ## Spanish support (Español)
 
 Convox can be used in Spanish. Switch with the **🌐 Español** button in the Convox

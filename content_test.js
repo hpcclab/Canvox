@@ -1010,11 +1010,9 @@
 
 		const headerSub = document.createElement("div");
 		headerSub.id = "convox-test-subtitle";
-		headerSub.textContent = T(
-			"ui_subtitle",
-			`Shortcuts: ${shortcutLabel("H")} help • Drag title to move`,
-			[shortcutLabel("H")],
-		);
+		headerSub.textContent = T("ui_subtitle", `Shortcuts: ${shortcutLabel("H")} help • Drag title to move`, [
+			shortcutLabel("H"),
+		]);
 		titleWrap.appendChild(headerSub);
 
 		const headerBtns = document.createElement("div");
