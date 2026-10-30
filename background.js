@@ -31,6 +31,34 @@ const DEFAULT_SETTINGS = {
 	volume: 100, // Scale 0-100
 };
 
+//temporary testing code for geminiPlanner.js (from llm-integration; kept commented out)
+/*
+import { createGeminiPlanner } from "./src/model/geminiPlanner.js";
+
+console.log(
+  "[Canvox] Gemini planner import:",
+  typeof createGeminiPlanner
+);
+
+(async () => {
+  let planner;
+
+  try {
+    planner = await createGeminiPlanner();
+
+    const plan = await planner.plan(
+      "Open my Canvas calendar."
+    );
+
+    console.log("[Canvox] Test plan:", plan);
+  } catch (error) {
+    console.error("[Canvox] Planner test failed:", error);
+  } finally {
+    planner?.destroy();
+  }
+})();
+*/
+
 // =============================================================================
 // Convox MV3 Service Worker / Background
 // =============================================================================
