@@ -1,5 +1,6 @@
 // geminiAnswerer.js
 //Answers a student's question about the current Canvas page using Gemini Nano.
+import { getNanoAvailability, createNanoSession } from "./geminiModel.js";
 
 const ANSWERER_INSTRUCTIONS = `
 You are Canvox, a voice assistant helping students use Canvas.
@@ -98,36 +99,22 @@ function cleanForSpeech(response) {
 export async function createGeminiAnswerer() {
   console.log("[Canvox][Answerer] Initializing Gemini Nano answerer.");
 
-  if (typeof LanguageModel === "undefined") {
-    console.error("[Canvox][Answerer] LanguageModel API is unavailable.");
-    throw new Error("Chrome Prompt API is unavailable.");
-  }
-
-  const io = {
-    expectedInputs: [{ type: "text", languages: ["en"] }],
-    expectedOutputs: [{ type: "text", languages: ["en"] }],
-  };
-
-  console.log("[Canvox][Answerer] Checking model availability.");
-
-  const availability = await LanguageModel.availability(io);
+  // Fail fast if the model isn't on this machine yet, so the caller can fall back.
+  // Downloading is handled separately by warmUpNano() at startup.
+  const availability = await getNanoAvailability();
   console.log("[Canvox][Answerer] Model availability:", availability);
 
   if (availability !== "available") {
     throw new Error(`Gemini Nano is not ready: ${availability}`);
   }
 
-  console.log(
-    "[Canvox][Answerer] Creating base session.",
-    { exampleCount: EXAMPLES.length, maxPageChars: MAX_PAGE_CHARS }
-  );
+  console.log("[Canvox][Answerer] Creating base session.", {
+    exampleCount: EXAMPLES.length,
+    maxPageChars: MAX_PAGE_CHARS,
+  });
 
   const initStart = performance.now();
-
-  const base = await LanguageModel.create({
-    ...io,
-    initialPrompts: buildInitialPrompts(),
-  });
+  const base = await createNanoSession({ initialPrompts: buildInitialPrompts() });
 
   console.log(
     "[Canvox][Answerer] Base session created in",
@@ -169,10 +156,7 @@ export async function createGeminiAnswerer() {
           "[Canvox][Answerer] Generation time:",
           `${generationSeconds.toFixed(1)} seconds`
         );
-        console.log(
-          "[Canvox][Answerer] Raw response type:",
-          typeof response
-        );
+        console.log("[Canvox][Answerer] Raw response type:", typeof response);
         console.log(
           "[Canvox][Answerer] Raw response length:",
           typeof response === "string" ? response.length : 0
@@ -181,10 +165,7 @@ export async function createGeminiAnswerer() {
 
         const cleaned = cleanForSpeech(response);
 
-        console.log(
-          "[Canvox][Answerer] Cleaned response length:",
-          cleaned.length
-        );
+        console.log("[Canvox][Answerer] Cleaned response length:", cleaned.length);
         console.log("[Canvox][Answerer] Cleaned answer:", cleaned);
 
         return cleaned;

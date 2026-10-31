@@ -1,4 +1,6 @@
 //geminiPlanner.js
+import { getNanoAvailability, createNanoSession } from "./geminiModel.js";
+
 const PLANNER_INSTRUCTIONS = `
 You are the command planner for Canvox, a Canvas accessibility extension.
 
@@ -71,29 +73,36 @@ export async function createGeminiPlanner() {
     additionalProperties: false,
   };
 
-  const availability = await LanguageModel.availability({
-    expectedInputs: [{ type: "text", languages: ["en"] }],
-    expectedOutputs: [{ type: "text", languages: ["en"] }],
-  });
-
+  // Fail fast if the model isn't on this machine yet, so the caller can fall back to regex.
+  // Downloading is handled separately by warmUpNano() at startup.
+  const availability = await getNanoAvailability();
   if (availability !== "available") {
     throw new Error(`Gemini Nano is not ready: ${availability}`);
   }
 
-const session = await LanguageModel.create({
-  expectedInputs: [{ type: "text", languages: ["en"] }],
-  expectedOutputs: [{ type: "text", languages: ["en"] }],
-  initialPrompts: [
-    {
-      role: "system",
-      content: PLANNER_INSTRUCTIONS,
-    },
-  ],
-});
-
+  const session = await createNanoSession({ systemPrompt: PLANNER_INSTRUCTIONS });
 
   return {
     async plan(command, pageContext = "") {
+      // Simple, explicit Canvas navigation requests don't need a model call.
+      const navigationMatch = command.match(
+        /^(?:please\s+)?(?:open|go to|navigate to|show me)\s+(?:my\s+)?(?:canvas\s+)?(home|dashboard|calendar|inbox|courses)\s*\.?$/i,
+      );
+
+      if (navigationMatch) {
+        return {
+          intent: "navigate",
+          steps: [
+            {
+              action: "navigate",
+              target: navigationMatch[1].toLowerCase(),
+              value: "",
+            },
+          ],
+          clarification: "",
+        };
+      }
+
       const prompt = `
 User command:
 ${command}
@@ -118,28 +127,6 @@ Return only the JSON plan described in your instructions.
 
         const raw = JSON.parse(cleaned);
 
-        // Normalize simple, explicit Canvas navigation requests.
-        // These commands do not need a multi-step LLM plan.
-        const navigationMatch = command.match(
-          /^(?:please\s+)?(?:open|go to|navigate to|show me)\s+(?:my\s+)?(?:canvas\s+)?(home|dashboard|calendar|inbox|courses)\s*\.?$/i,
-        );
-
-        if (navigationMatch) {
-          const destination = navigationMatch[1].toLowerCase();
-
-          return {
-            intent: "navigate",
-            steps: [
-              {
-                action: "navigate",
-                target: destination,
-                value: "",
-              },
-            ],
-            clarification: "",
-          };
-        }
-
         const rawSteps = raw.steps ?? raw.plan;
 
         if (!Array.isArray(rawSteps) || rawSteps.length === 0) {
@@ -157,24 +144,10 @@ Return only the JSON plan described in your instructions.
         ];
 
         const steps = rawSteps.map((step) => {
-          const actionText = String(step.action ?? "").toLowerCase();
+          const action = String(step.action ?? "").toLowerCase();
 
-          let action;
-
-          if (actionText === "navigate") {
-            action = "navigate";
-          } else if (actionText === "summarize") {
-            action = "summarize";
-          } else if (actionText === "read") {
-            action = "read";
-          } else if (actionText === "click") {
-            action = "click";
-          } else if (actionText === "fill") {
-            action = "fill";
-          } else if (actionText === "clarify") {
-            action = "clarify";
-          } else {
-            throw new Error(`Unsupported planner action: ${actionText}`);
+          if (!allowedActions.includes(action)) {
+            throw new Error(`Unsupported planner action: ${action}`);
           }
 
           return {
@@ -187,10 +160,6 @@ Return only the JSON plan described in your instructions.
         const intent = allowedIntents.includes(raw.intent)
           ? raw.intent
           : "navigate";
-
-        if (steps.some((step) => !allowedActions.includes(step.action))) {
-          throw new Error("Unsupported action in plan.");
-        }
 
         return {
           intent,
